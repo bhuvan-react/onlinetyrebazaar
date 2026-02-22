@@ -16,10 +16,8 @@ interface TyreCardProps {
 }
 
 export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
-  // Default to "used" if available, otherwise "new"
-  const [selectedVariant, setSelectedVariant] = useState<"new" | "used">(
-    tyre.usedPrice ? "used" : "new"
-  )
+  // Default to "new" always; user can switch to "used" by clicking the Used button
+  const [selectedVariant, setSelectedVariant] = useState<"new" | "used">("new")
   const [isViewerOpen, setIsViewerOpen] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -58,20 +56,12 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
   const handleVariantSelect = (variant: "new" | "used") => {
     if (variant === "used" && !tyre.usedPrice) return
     setSelectedVariant(variant)
-    if (!isSelected) {
-      onSelect()
-    }
+    // Also mark this card as selected in the parent
+    if (!isSelected) onSelect()
   }
 
   const handleCardSelect = () => {
-    if (!isSelected) {
-      // If selecting the card for the first time (or re-selecting),
-      // prioritize "used" if available
-      if (tyre.usedPrice) {
-        setSelectedVariant("used")
-      }
-      onSelect()
-    }
+    if (!isSelected) onSelect()
   }
 
   const scrollPrev = (e: React.MouseEvent) => {
@@ -97,7 +87,7 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
           ? "ring-2 ring-[#0D9488]"
           : "ring-2 ring-[#9333EA]"
         : ""
-        } ${!tyre.inStock ? "opacity-75" : ""}`}
+        }`}
     >
       {/* Image Section - Left Side */}
       <div
@@ -178,7 +168,8 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
           </div>
         </div>
 
-        {!tyre.inStock && (
+        {/* Out of Stock overlay — only shown if backend explicitly marks inStock: false */}
+        {tyre.inStock === false && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
             <span className="px-3 py-1 bg-[#1F2937] text-white rounded text-xs font-semibold">Out of Stock</span>
           </div>
@@ -213,20 +204,21 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
         </div>
 
         <div className="mt-auto">
-          {/* Price Chips */}
+          {/* Price Chips — color is driven purely by selectedVariant, no dependency on isSelected */}
           <div className="flex items-center gap-2 mb-3">
-            {tyre.type !== "used" && tyre.newPrice && (
+            {tyre.newPrice && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   handleVariantSelect("new")
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all border ${isSelected && selectedVariant === "new"
-                  ? "bg-[#0D9488] text-white border-[#0D9488]"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-[#0D9488]"
-                  }`}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                  selectedVariant === "new"
+                    ? "bg-[#0D9488] text-white border-[#0D9488] shadow-sm"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-[#0D9488]"
+                }`}
               >
-                New ₹{(tyre.newPrice || tyre.price).toLocaleString()}
+                New<br />₹{(tyre.newPrice || tyre.price).toLocaleString()}
               </button>
             )}
 
@@ -236,28 +228,30 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
                 handleVariantSelect("used")
               }}
               disabled={!tyre.usedPrice}
-              className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all border ${!tyre.usedPrice
-                ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
-                : isSelected && selectedVariant === "used"
-                  ? "bg-[#9333EA] text-white border-[#9333EA]"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-[#9333EA]"
-                }`}
+              className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                !tyre.usedPrice
+                  ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
+                  : selectedVariant === "used"
+                    ? "bg-[#9333EA] text-white border-[#9333EA] shadow-sm"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-[#9333EA]"
+              }`}
             >
-              Used {tyre.usedPrice ? `₹${tyre.usedPrice.toLocaleString()}` : "N/A"}
+              Used<br />{tyre.usedPrice ? `₹${tyre.usedPrice.toLocaleString()}` : "N/A"}
             </button>
           </div>
 
-          {/* Buy Button */}
+          {/* Get this Lead Button — teal for new, purple for used */}
           <Link
-            href={isSelected && tyre.inStock ? `/quote?tyreId=${tyre.id}` : "#"}
-            onClick={(e) => e.stopPropagation()}
-            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all text-sm ${isSelected && tyre.inStock
-              ? selectedVariant === "new"
+            href={`/quote?tyreId=${tyre.id}&variant=${selectedVariant}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!isSelected) onSelect()
+            }}
+            className={`w-full py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm ${
+              selectedVariant === "new"
                 ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white hover:opacity-90 shadow-md shadow-teal-500/20"
                 : "bg-[#9333EA] text-white hover:opacity-90 shadow-md shadow-purple-500/20"
-              : "bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed pointer-events-none"
-              }`}
-            aria-disabled={!isSelected || !tyre.inStock}
+            }`}
           >
             <ShoppingCart className="w-4 h-4" />
             Get this Lead
