@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: tyreplus-postgres
+    environment:
+      POSTGRES_DB: tyreplus_dealer_db
+      POSTGRES_USER: tyreplus_user
+      POSTGRES_PASSWORD: tyreplus_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tyreplus_user -d tyreplus_dealer_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tyreplus-network
+
+  app:
+    image: ravillabhanu/tyreplus-dealer-app:1.0.0
+    container_name: tyreplus-dealer-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_NAME: tyreplus_dealer_db
+      DB_USER: tyreplus_user
+      DB_PASSWORD: tyreplus_password
+      JWT_SECRET: tyreplus-dealer-app-secret-key-for-jwt-token-generation-minimum-256-bits-required-for-hmac-sha256
+      RAZORPAY_KEY_ID: rzp_test_12345
+      RAZORPAY_KEY_SECRET: abcde_secret_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tyreplus-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  tyreplus-network:
+    driver: bridge

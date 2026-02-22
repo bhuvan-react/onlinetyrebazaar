@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: tyreplus-postgres
+    # In real production, change these to something unique!
+    environment:
+      POSTGRES_DB: tyreplus_dealer_db
+      POSTGRES_USER: ${DB_USER:-tyreplus_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tyreplus_password}
+    ports:
+      - "5432:5432" # Keep this ONLY if you need to connect from outside Docker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tyreplus-network
+    restart: always
+
+  app:
+    image: ravillabhanu/tyreplus-dealer-app:1.0.0
+    container_name: tyreplus-dealer-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Use 'prod' for production - disables DEBUG logs from your local file
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_NAME: tyreplus_dealer_db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tyreplus-network
+    restart: always
+
+volumes:
+  postgres_data:
+
+networks:
+  tyreplus-network:
+    driver: bridge

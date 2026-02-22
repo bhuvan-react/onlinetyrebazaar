@@ -1,0 +1,49 @@
+# ── Build artefacts ───────────────────────────────────────────────────────────
+target/
+backend/target/
+frontend/web/.next/
+frontend/web/out/
+frontend/web/node_modules/
+
+# ── Mobile app (Expo — standalone, not part of Docker image) ─────────────────
+frontend/mobile/
+
+# ── Maven wrapper binaries ────────────────────────────────────────────────────
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# ── IDE / OS artefacts ────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+README.md
+DEPLOY.md
+API_REFERENCE.md
+*.md
+
+# ── Docker files themselves ───────────────────────────────────────────────────
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.prod.yml
+
+# ── Secrets / local config ────────────────────────────────────────────────────
+.env
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
