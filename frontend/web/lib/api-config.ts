@@ -24,6 +24,10 @@ export const API_CONFIG = {
         },
         LOCATION: {
             CHECK_PINCODE: "/locations/check",
-        }
+        },
+        TYRES: {
+            GET_ALL: "/tyres",
+            GET_BY_ID: (id: string) => `/tyres/${id}`,
+        },
     },
 }

@@ -1,244 +1,389 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useRouter } from "next/navigation"
-import { useAppSelector } from "@/lib/hooks"
-import { leadService, Lead } from "@/lib/services/lead-service"
-import { Loader2, Package, MapPin, Calendar, Truck, Shield, CheckCircle, Clock } from "lucide-react"
-import Image from "next/image"
+import { Suspense, useState, useMemo, useEffect } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { useAppSelector, useAppDispatch } from "@/lib/hooks"
+import { setVehicleType, setMake, setModel } from "@/lib/store"
+import { FiltersSidebar } from "@/components/filters-sidebar"
+import { TyreCard } from "@/components/tyre-card"
+import { TyreCardSkeleton } from "@/components/tyre-card-skeleton"
+import { MobileFiltersSheet } from "@/components/mobile-filters-sheet"
+import { tyreService } from "@/lib/services/tyre-service"
+import { type Tyre, vehicleTyreSizes, getAllUniqueSizes } from "@/lib/tyre-data"
+import { ChevronRight, SlidersHorizontal, Grid, List } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-export default function LeadTrackingDashboard() {
-    const router = useRouter()
-    const { isAuthenticated, user } = useAppSelector((state) => state.auth)
-    const [leads, setLeads] = useState<Lead[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-    const [offers, setOffers] = useState<any[]>([])
-    const [isOffersLoading, setIsOffersLoading] = useState(false)
+function SearchContent() {
+  const search = useAppSelector((state) => state.search)
+  const dispatch = useAppDispatch()
+  const searchParams = useSearchParams()
 
-    useEffect(() => {
-        if (!isAuthenticated) {
-            router.push("/")
-            return
+  // Filter states
+  const [tyreType, setTyreType] = useState<"new" | "used" | "all">("all")
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const [selectedPriceRange, setSelectedPriceRange] = useState<{ min: number; max: number } | null>(null)
+  const [minRating, setMinRating] = useState(0)
+  const [selectedTyreSizes, setSelectedTyreSizes] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState<"popular" | "price-low" | "price-high" | "rating">("popular")
+  const [selectedTyre, setSelectedTyre] = useState<string | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [isLoading, setIsLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(12)
+  const [tyres, setTyres] = useState<Tyre[]>([])
+
+  // Determine available tyre sizes based on vehicle selection
+  const availableSizes = useMemo(() => {
+    if (search.make && search.model && search.variant && vehicleTyreSizes[search.make]?.[search.model]?.[search.variant]) {
+      return vehicleTyreSizes[search.make][search.model][search.variant]
+    }
+    // If no specific vehicle selected (or data missing), show all unique sizes from our tyre data
+    return getAllUniqueSizes()
+  }, [search.make, search.model, search.variant])
+
+  // Fetch tyres
+  useEffect(() => {
+    const fetchTyres = async () => {
+      setIsLoading(true)
+      try {
+        const filters = {
+          size: search.tyreSize || undefined,
+          brand: selectedBrands.length > 0 ? selectedBrands[0] : undefined,
+          categoryId: searchParams.get("categoryId") || undefined,
         }
+        const response = await tyreService.getAllTyres(filters)
+        setTyres(response.data)
+      } catch (error) {
+        console.error("Failed to fetch tyres:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchTyres()
+  }, [search.make, search.model, search.variant, search.tyreSize, search.vehicleType, selectedBrands])
 
-        const fetchLeads = async () => {
-            try {
-                const response = await leadService.getCustomerLeads()
-                // Backend returns bare Lead[] array (not wrapped in { leads: [...] })
-                const leadsData = Array.isArray(response.data) ? response.data : (response.data as any).leads || []
-                setLeads(leadsData)
-                // If there's at least one lead, auto-select the first one
-                if (leadsData.length > 0) {
-                    setSelectedLeadId(leadsData[0].id)
-                }
-            } catch (error) {
-                console.error("Failed to fetch leads", error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
+  // Handle query params
+  useEffect(() => {
+    const make = searchParams.get("make")
+    const model = searchParams.get("model")
+    const brand = searchParams.get("brand")
 
-        fetchLeads()
-    }, [isAuthenticated, router])
-
-    useEffect(() => {
-        if (selectedLeadId) {
-            const fetchOffers = async () => {
-                setIsOffersLoading(true)
-                try {
-                    const response = await leadService.getLeadOffers(selectedLeadId)
-                    // Backend returns bare OfferResponse[] array (not wrapped in { offers: [...] })
-                    const offersData = Array.isArray(response.data) ? response.data : (response.data as any).offers || []
-                    setOffers(offersData)
-                } catch (error) {
-                    console.error("Failed to fetch offers", error)
-                } finally {
-                    setIsOffersLoading(false)
-                }
-            }
-            fetchOffers()
-        }
-    }, [selectedLeadId])
-
-    const handleSelectOffer = async (leadId: string, dealerId: string) => {
-        if (confirm("Are you sure you want to select this offer? This will close your requirement.")) {
-            try {
-                await leadService.selectOffer(leadId, dealerId)
-                alert("Offer accepted! The dealer will contact you soon.")
-                // Refresh leads
-                const response = await leadService.getCustomerLeads()
-                // Backend returns bare Lead[] array (not wrapped in { leads: [...] })
-                const leadsData = Array.isArray(response.data) ? response.data : (response.data as any).leads || []
-                setLeads(leadsData)
-            } catch (error) {
-                console.error("Error selecting offer", error)
-                alert("Failed to accept offer. Please try again.")
-            }
-        }
+    if (make) {
+      dispatch(setVehicleType("4W")) // Default to 4W for now, or infer from somewhere
+      dispatch(setMake(make))
+      if (model) {
+        dispatch(setModel(model))
+      }
     }
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0D9488]" />
-            </div>
-        )
+    if (brand) {
+      setSelectedBrands([brand])
+    }
+  }, [searchParams, dispatch])
+
+  // Sync store tyreSize to local filter
+  useEffect(() => {
+    if (search.tyreSize) {
+      setSelectedTyreSizes([search.tyreSize])
+    }
+  }, [search.tyreSize])
+
+  // Simulate loading on mount and filter change
+  useEffect(() => {
+    setIsLoading(true)
+    setVisibleCount(12) // Reset visible count on filter change
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [tyreType, selectedBrands, selectedTyreSizes, selectedPriceRange, minRating, sortBy, search.make, search.model])
+
+  // Filter and sort tyres
+  const filteredTyres = useMemo(() => {
+    let result = [...tyres]
+
+    // Filter by type
+    if (tyreType !== "all") {
+      result = result.filter((t) => t.type === tyreType)
     }
 
-    return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Tyre Requirements</h1>
-                        <p className="text-gray-500 mt-2">Track your active requirements and compare offers from dealers.</p>
-                    </div>
-                    <button
-                        onClick={() => router.push("/")}
-                        className="px-4 py-2 bg-white text-[#0D9488] border border-[#0D9488] rounded-lg hover:bg-teal-50 transition-colors font-medium"
-                    >
-                        New Requirement
-                    </button>
-                </div>
+    // Filter by brands
+    if (selectedBrands.length > 0) {
+      result = result.filter((t) => selectedBrands.includes(t.brand))
+    }
 
-                {leads.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-                        <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Package className="w-10 h-10 text-[#0D9488]" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">No Active Requirements</h2>
-                        <p className="text-gray-500 mb-6">You haven't submitted any tyre requirements yet.</p>
-                        <button
-                            onClick={() => router.push("/")}
-                            className="px-6 py-3 bg-[#0D9488] text-white rounded-xl hover:bg-[#0F766E] transition-colors font-medium"
-                        >
-                            Find Tyres Now
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid lg:grid-cols-3 gap-8">
-                        {/* Left Column: List of Requirements */}
-                        <div className="lg:col-span-1 space-y-4">
-                            <h2 className="text-lg font-semibold text-gray-900">Your Leads</h2>
-                            {leads.map((lead) => (
-                                <div
-                                    key={lead.id}
-                                    onClick={() => setSelectedLeadId(lead.id)}
-                                    className={`p-5 rounded-2xl cursor-pointer transition-all border-2 ${selectedLeadId === lead.id
-                                            ? "bg-white border-[#0D9488] shadow-md relative overflow-hidden"
-                                            : "bg-white border-transparent shadow-sm hover:border-gray-200"
-                                        }`}
-                                >
-                                    {/* Decorative accent for selected */}
-                                    {selectedLeadId === lead.id && (
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-[#0D9488]" />
-                                    )}
+    // Filter by tyre size
+    if (selectedTyreSizes.length > 0) {
+      result = result.filter((t) => selectedTyreSizes.includes(t.size))
+    }
 
-                                    <div className="flex justify-between items-start mb-3">
-                                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${lead.status === "NEW" ? "bg-blue-100 text-blue-700" :
-                                                lead.status === "DEALER_SELECTED" ? "bg-green-100 text-green-700" :
-                                                    "bg-yellow-100 text-yellow-700"
-                                            }`}>
-                                            {lead.status}
-                                        </span>
-                                        <span className="text-xs text-gray-400">{new Date(lead.createdAt).toLocaleDateString()}</span>
-                                    </div>
+    // Filter by price range
+    if (selectedPriceRange) {
+      result = result.filter((t) => t.price >= selectedPriceRange.min && t.price <= selectedPriceRange.max)
+    }
 
-                                    <h3 className="font-bold text-gray-900 line-clamp-1">{lead.vehicleModel}</h3>
-                                    <p className="text-sm text-gray-500 line-clamp-1">{lead.vehicleYear}</p>
-                                </div>
-                            ))}
-                        </div>
+    // Filter by rating
+    if (minRating > 0) {
+      result = result.filter((t) => t.rating >= minRating)
+    }
 
-                        {/* Right Column: Offers for Selected Requirement */}
-                        <div className="lg:col-span-2">
-                            {selectedLeadId ? (
-                                <div className="bg-white rounded-2xl shadow-sm p-6 lg:p-8 min-h-[500px]">
-                                    <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
-                                        <div>
-                                            <h2 className="text-xl font-bold text-gray-900">Offers Received</h2>
-                                            <p className="text-sm text-gray-500 mt-1">Compare prices to find the best deal.</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full">
-                                            <Clock className="w-4 h-4" />
-                                            Live Updates
-                                        </div>
-                                    </div>
+    // Sort
+    switch (sortBy) {
+      case "price-low":
+        result.sort((a, b) => a.price - b.price)
+        break
+      case "price-high":
+        result.sort((a, b) => b.price - a.price)
+        break
+      case "rating":
+        result.sort((a, b) => b.rating - a.rating)
+        break
+      default:
+        result.sort((a, b) => b.reviewCount - a.reviewCount)
+    }
 
-                                    {isOffersLoading ? (
-                                        <div className="flex items-center justify-center py-20">
-                                            <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                                        </div>
-                                    ) : offers.length === 0 ? (
-                                        <div className="text-center py-16">
-                                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <Package className="w-8 h-8 text-gray-400" />
-                                            </div>
-                                            <h3 className="text-lg font-medium text-gray-900 mb-1">Waiting for offers...</h3>
-                                            <p className="text-sm text-gray-500">Dealers are preparing the best quotes for your requirement.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-6">
-                                            {offers.map((offer) => (
-                                                <div key={offer.id} className="border border-gray-100 rounded-xl p-5 hover:border-[#0D9488] transition-colors group">
-                                                    <div className="flex flex-col md:flex-row gap-5">
-                                                        {/* Left: Dealer info (Anonymous if not accepted yet, unless returned by backend) */}
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-3 mb-3">
-                                                                <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-[#0D9488] font-bold shadow-sm">
-                                                                    {offer.dealerName?.charAt(0) || "D"}
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="font-bold text-gray-900">{offer.dealerName || "Verified Dealer"}</h4>
-                                                                    <div className="flex items-center text-xs text-gray-500 gap-1 mt-0.5">
-                                                                        <MapPin className="w-3 h-3" />
-                                                                        {offer.distance ? `${offer.distance} km away` : "Nearby"}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2 mt-4">
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                                                    <CheckCircle className="w-3.5 h-3.5" /> Ready Stock
-                                                                </span>
-                                                                {offer.condition === "NEW" && (
-                                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                                                        <Shield className="w-3.5 h-3.5" /> Brand New
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
+    return result
+  }, [tyreType, selectedBrands, selectedTyreSizes, selectedPriceRange, minRating, sortBy, tyres])
 
-                                                        {/* Right: Price & Action */}
-                                                        <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                                                            <div className="mb-4 md:mb-0 text-left md:text-right w-full">
-                                                                <div className="text-sm text-gray-500 mb-1">Offered Price</div>
-                                                                <div className="text-2xl font-bold text-gray-900">₹{offer.price.toLocaleString('en-IN')}</div>
-                                                                <div className="text-xs text-gray-400 mt-1">inclusive of taxes</div>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => handleSelectOffer(selectedLeadId, offer.dealerId)}
-                                                                className="w-full md:w-auto px-6 py-2.5 bg-[#1F2937] text-white rounded-lg hover:bg-black transition-colors font-medium text-sm"
-                                                            >
-                                                                Accept & View Details
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="bg-transparent border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center p-12 h-full text-gray-400 text-sm">
-                                    Select a requirement to view offers
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
+  // Calculate brand counts based on current filters (except brand filter)
+  const brandCounts = useMemo(() => {
+    let result = [...tyres]
+
+    // Filter by type
+    if (tyreType !== "all") {
+      result = result.filter((t) => t.type === tyreType)
+    }
+
+    // Filter by price range
+    if (selectedPriceRange) {
+      result = result.filter((t) => t.price >= selectedPriceRange.min && t.price <= selectedPriceRange.max)
+    }
+
+    // Filter by rating
+    if (minRating > 0) {
+      result = result.filter((t) => t.rating >= minRating)
+    }
+
+    // Filter by tyre size
+    if (selectedTyreSizes.length > 0) {
+      result = result.filter((t) => selectedTyreSizes.includes(t.size))
+    }
+
+    // Count brands
+    const counts: Record<string, number> = {}
+    result.forEach((t) => {
+      counts[t.brand] = (counts[t.brand] || 0) + 1
+    })
+    return counts
+  }, [tyreType, selectedPriceRange, minRating, selectedTyreSizes, tyres])
+
+  const vehicleString = search.vehicleType
+    ? `${search.make || ""} ${search.model || ""} ${search.variant || ""}`.trim()
+    : "All Vehicles"
+
+  return (
+    <div className="min-h-screen bg-[#F9FAFB]">
+      {/* Breadcrumb */}
+      <div className="bg-white border-b border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <nav className="flex items-center gap-2 text-sm">
+            <Link href="/" className="text-[#6B7280] hover:text-[#0D9488] transition-colors">
+              Home
+            </Link>
+            <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+            <span className="text-[#1F2937] font-medium">Search Results</span>
+            {search.vehicleType && (
+              <>
+                <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+                <span className="text-[#0D9488] font-medium">{vehicleString}</span>
+              </>
+            )}
+            {search.pincode && (
+              <>
+                <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+                <span className="text-[#6B7280]">📍 {search.pincode}</span>
+              </>
+            )}
+          </nav>
         </div>
-    )
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#1F2937]">
+              {search.vehicleType ? `Tyres for ${vehicleString}` : "🛞 Browse All Tyres"}
+            </h1>
+            <p className="text-[#6B7280] mt-1">
+              {filteredTyres.length} tyres found{search.pincode ? ` • Delivery to ${search.pincode}` : ""}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Mobile Filter Button */}
+            <button
+              onClick={() => setShowFilters(true)}
+              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] rounded-xl hover:border-[#0D9488] transition-colors"
+            >
+              <SlidersHorizontal className="w-5 h-5 text-[#6B7280]" />
+              <span className="text-[#1F2937] font-medium">Filters</span>
+            </button>
+
+            {/* View Mode Toggle */}
+            {/* <div className="hidden sm:flex items-center bg-white border border-[#E5E7EB] rounded-xl p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white" : "text-[#6B7280] hover:bg-[#F9FAFB]"
+                  }`}
+              >
+                <Grid className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white" : "text-[#6B7280] hover:bg-[#F9FAFB]"
+                  }`}
+              >
+                <List className="w-5 h-5" />
+              </button>
+            </div> */}
+
+            {/* Sort Dropdown */}
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-[180px] bg-white border-[#E5E7EB] rounded-xl text-[#1F2937]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex gap-8">
+          {/* Desktop Filters Sidebar */}
+          <div className="hidden lg:block w-80 flex-shrink-0">
+            <FiltersSidebar
+              tyreType={tyreType}
+              setTyreType={setTyreType}
+              selectedBrands={selectedBrands}
+              setSelectedBrands={setSelectedBrands}
+              selectedPriceRange={selectedPriceRange}
+              setSelectedPriceRange={setSelectedPriceRange}
+              minRating={minRating}
+              setMinRating={setMinRating}
+              brandCounts={brandCounts}
+              availableSizes={availableSizes}
+              selectedTyreSizes={selectedTyreSizes}
+              setSelectedTyreSizes={setSelectedTyreSizes}
+            />
+          </div>
+
+          {/* Products Grid */}
+          <div className="flex-1">
+            {isLoading ? (
+              <div
+                className={
+                  viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col gap-4"
+                }
+              >
+                {[...Array(6)].map((_, i) => (
+                  <TyreCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : filteredTyres.length > 0 ? (
+              <>
+                <div
+                  className={
+                    viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "flex flex-col gap-4"
+                  }
+                >
+                  {filteredTyres.slice(0, visibleCount).map((tyre) => (
+                    <TyreCard
+                      key={tyre.id}
+                      tyre={tyre}
+                      isSelected={selectedTyre === tyre.id}
+                      onSelect={() => setSelectedTyre(selectedTyre === tyre.id ? null : tyre.id)}
+                    />
+                  ))}
+                </div>
+                {visibleCount < filteredTyres.length && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      onClick={() => setVisibleCount((prev) => prev + 12)}
+                      className="px-4 py-2 bg-white border border-[#E5E7EB] rounded-xl text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent hover:border-[#0D9488] hover:text-[#0D9488] transition-colors shadow-sm"
+                    >
+                      Load More Tyres
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-16 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+                <div className="text-6xl mb-4">😔</div>
+                <h3 className="text-xl font-semibold text-[#1F2937] mb-2">No tyres found</h3>
+                <p className="text-[#6B7280] mb-6">Try adjusting your filters to see more results</p>
+                <button
+                  onClick={() => {
+                    setTyreType("all")
+                    setSelectedBrands([])
+                    setSelectedPriceRange(null)
+                    setMinRating(0)
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Filters Bottom Sheet */}
+      <MobileFiltersSheet
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        tyreType={tyreType}
+        setTyreType={setTyreType}
+        selectedBrands={selectedBrands}
+        setSelectedBrands={setSelectedBrands}
+        selectedPriceRange={selectedPriceRange}
+        setSelectedPriceRange={setSelectedPriceRange}
+        minRating={minRating}
+        setMinRating={setMinRating}
+        resultCount={filteredTyres.length}
+        brandCounts={brandCounts}
+        availableSizes={availableSizes}
+        selectedTyreSizes={selectedTyreSizes}
+        setSelectedTyreSizes={setSelectedTyreSizes}
+      />
+    </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-32 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-48 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
+  )
 }

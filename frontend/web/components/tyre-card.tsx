@@ -28,13 +28,13 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
   // Mock 4 images for the carousel (using the same image for demo purposes)
   // In a real app, these would be different views from the API
   const images = [
-    tyre.imageUrl || "/placeholder.svg",
-    tyre.imageUrl || "/placeholder.svg",
-    tyre.imageUrl || "/placeholder.svg",
-    tyre.imageUrl || "/placeholder.svg",
+    tyre.image || "/placeholder.svg",
+    tyre.image || "/placeholder.svg",
+    tyre.image || "/placeholder.svg",
+    tyre.image || "/placeholder.svg",
   ]
 
-  const discount = tyre.originalPrice && tyre.price ? Math.round(((tyre.originalPrice - tyre.price) / tyre.originalPrice) * 100) : 0
+  const discount = tyre.originalPrice ? Math.round(((tyre.originalPrice - tyre.price) / tyre.originalPrice) * 100) : 0
 
   useEffect(() => {
     if (!emblaApi) return
@@ -65,6 +65,8 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
 
   const handleCardSelect = () => {
     if (!isSelected) {
+      // If selecting the card for the first time (or re-selecting),
+      // prioritize "used" if available
       if (tyre.usedPrice) {
         setSelectedVariant("used")
       }
@@ -125,7 +127,7 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
                 <div key={index} className="relative w-full aspect-square flex-[0_0_100%] min-w-0">
                   <Image
                     src={img}
-                    alt={`${tyre.brand} ${tyre.pattern} view ${index + 1}`}
+                    alt={`${tyre.brand} ${tyre.model} view ${index + 1}`}
                     fill
                     className="object-contain cursor-pointer hover:scale-105 transition-transform duration-300"
                     onClick={openViewer}
@@ -191,19 +193,19 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
         <div className="flex justify-between items-start mb-2">
           <div>
             <span className="text-xs font-medium text-[#0D9488] uppercase tracking-wide">{tyre.brand}</span>
-            <h3 className="text-lg font-bold text-[#1F2937] leading-tight">{tyre.pattern}</h3>
+            <h3 className="text-lg font-bold text-[#1F2937] leading-tight">{tyre.model}</h3>
             <p className="text-sm text-[#6B7280] mt-0.5">{tyre.size}</p>
           </div>
           <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
             <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-xs font-bold text-[#1F2937]">{tyre.rating || 0}</span>
-            <span className="text-[10px] text-[#6B7280]">({tyre.reviewCount || 0})</span>
+            <span className="text-xs font-bold text-[#1F2937]">{tyre.rating}</span>
+            <span className="text-[10px] text-[#6B7280]">({tyre.reviewCount})</span>
           </div>
         </div>
 
         {/* Features */}
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {(tyre.features || []).slice(0, 3).map((feature) => (
+          {tyre.features.slice(0, 3).map((feature) => (
             <span key={feature} className="px-2 py-0.5 bg-[#F9FAFB] text-[#6B7280] text-[10px] font-medium rounded-md border border-gray-100">
               {feature}
             </span>
@@ -269,6 +271,6 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
         images={images}
         initialIndex={currentImageIndex}
       />
-    </div>
+    </div >
   )
 }
