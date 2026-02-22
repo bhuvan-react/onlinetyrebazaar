@@ -22,7 +22,7 @@ public class JwtUtil {
     @Value("${jwt.secret:tyreplus-dealer-app-secret-key-for-jwt-token-generation-minimum-256-bits}")
     private String secret;
 
-    @Value("${jwt.expiration:900000}") // 24 hours default
+    @Value("${jwt.expiration:86400000}") // 24 hours default
     private Long expiration;
 
     private SecretKey getSigningKey() {

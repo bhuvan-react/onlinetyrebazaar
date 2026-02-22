@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 public class TyreRepositoryAdapter implements TyreRepository {
@@ -51,7 +50,7 @@ public class TyreRepositoryAdapter implements TyreRepository {
 
     private Tyre toDomain(TyreJpaEntity entity) {
         List<String> featureList = entity.getFeatures() != null
-                ? Arrays.asList(entity.getFeatures().split(","))
+                ? Arrays.asList(entity.getFeatures().split(",\\s*"))
                 : Collections.emptyList();
 
         return Tyre.builder()
@@ -64,6 +63,17 @@ public class TyreRepositoryAdapter implements TyreRepository {
                 .features(featureList)
                 .imageUrl(entity.getImageUrl())
                 .warrantyYears(entity.getWarrantyYears())
+                // Extended fields
+                .newPrice(entity.getNewPrice())
+                .usedPrice(entity.getUsedPrice())
+                .originalPrice(entity.getOriginalPrice())
+                .rating(entity.getRating())
+                .reviewCount(entity.getReviewCount())
+                .type(entity.getType())
+                .inStock(entity.getInStock() != null ? entity.getInStock() : true)
+                .condition(entity.getCondition())
+                .treadDepth(entity.getTreadDepth())
+                .freeInstallation(entity.getFreeInstallation() != null ? entity.getFreeInstallation() : true)
                 .build();
     }
 }

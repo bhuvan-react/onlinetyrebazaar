@@ -16,8 +16,10 @@ interface TyreCardProps {
 }
 
 export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
-  // Default to "new" always; user can switch to "used" by clicking the Used button
-  const [selectedVariant, setSelectedVariant] = useState<"new" | "used">("new")
+  // Default variant based on tyre.type from DB — "used" tyres start on Used tab
+  const [selectedVariant, setSelectedVariant] = useState<"new" | "used">(
+    tyre.type === "used" ? "used" : "new"
+  )
   const [isViewerOpen, setIsViewerOpen] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -32,7 +34,12 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
     tyre.image || "/placeholder.svg",
   ]
 
-  const discount = tyre.originalPrice ? Math.round(((tyre.originalPrice - tyre.price) / tyre.originalPrice) * 100) : 0
+  // Discount: for new tyres use originalPrice vs newPrice; for used tyres show saving vs new
+  const discount = selectedVariant === "new" && tyre.originalPrice && tyre.newPrice
+    ? Math.round(((tyre.originalPrice - tyre.newPrice) / tyre.originalPrice) * 100)
+    : selectedVariant === "used" && tyre.newPrice && tyre.usedPrice
+      ? Math.round(((tyre.newPrice - tyre.usedPrice) / tyre.newPrice) * 100)
+      : 0
 
   useEffect(() => {
     if (!emblaApi) return
@@ -82,12 +89,11 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden transition-all flex flex-col sm:flex-row ${isSelected
-        ? selectedVariant === "new"
+      className={`bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden transition-all flex flex-col sm:flex-row ${
+        selectedVariant === "new"
           ? "ring-2 ring-[#0D9488]"
           : "ring-2 ring-[#9333EA]"
-        : ""
-        }`}
+      }`}
     >
       {/* Image Section - Left Side */}
       <div
@@ -159,7 +165,7 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
                   scrollTo(index)
                 }}
                 className={`w-1.5 h-1.5 rounded-full transition-all ${selectedIndex === index
-                  ? "bg-[#0D9488] w-3"
+                  ? selectedVariant === "new" ? "bg-[#0D9488] w-3" : "bg-[#9333EA] w-3"
                   : "bg-gray-300 hover:bg-gray-400"
                   }`}
                 aria-label={`Go to slide ${index + 1}`}
