@@ -26,10 +26,12 @@ export default function LeadTrackingDashboard() {
         const fetchLeads = async () => {
             try {
                 const response = await leadService.getCustomerLeads()
-                setLeads(response.data.leads || [])
+                // Backend returns bare Lead[] array (not wrapped in { leads: [...] })
+                const leadsData = Array.isArray(response.data) ? response.data : (response.data as any).leads || []
+                setLeads(leadsData)
                 // If there's at least one lead, auto-select the first one
-                if (response.data.leads && response.data.leads.length > 0) {
-                    setSelectedLeadId(response.data.leads[0].id)
+                if (leadsData.length > 0) {
+                    setSelectedLeadId(leadsData[0].id)
                 }
             } catch (error) {
                 console.error("Failed to fetch leads", error)
@@ -47,7 +49,9 @@ export default function LeadTrackingDashboard() {
                 setIsOffersLoading(true)
                 try {
                     const response = await leadService.getLeadOffers(selectedLeadId)
-                    setOffers(response.data.offers || [])
+                    // Backend returns bare OfferResponse[] array (not wrapped in { offers: [...] })
+                    const offersData = Array.isArray(response.data) ? response.data : (response.data as any).offers || []
+                    setOffers(offersData)
                 } catch (error) {
                     console.error("Failed to fetch offers", error)
                 } finally {
@@ -65,7 +69,9 @@ export default function LeadTrackingDashboard() {
                 alert("Offer accepted! The dealer will contact you soon.")
                 // Refresh leads
                 const response = await leadService.getCustomerLeads()
-                setLeads(response.data.leads || [])
+                // Backend returns bare Lead[] array (not wrapped in { leads: [...] })
+                const leadsData = Array.isArray(response.data) ? response.data : (response.data as any).leads || []
+                setLeads(leadsData)
             } catch (error) {
                 console.error("Error selecting offer", error)
                 alert("Failed to accept offer. Please try again.")

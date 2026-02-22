@@ -47,6 +47,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/dealer/**").authenticated()
                         .requestMatchers("/api/v1/leads/**").authenticated()
                         .requestMatchers("/api/v1/customer/**").hasRole("CUSTOMER")
+                        // Sell-tyre submit: customer-facing, auth optional (CustomerDetails may be null)
+                        .requestMatchers("/api/v1/sell-tyres/**").permitAll()
+                        // Vehicle master data (makes/models/variants/tyre-sizes) are public lookups
+                        .requestMatchers("/api/v1/vehicles/makes", "/api/v1/vehicles/models",
+                                "/api/v1/vehicles/variants", "/api/v1/vehicles/tyre-sizes").permitAll()
+                        // Location serviceability check is public
+                        .requestMatchers("/api/v1/locations/**").permitAll()
                         // Allow static resources for frontend
                         .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/*.ico", "/*.png",
                                 "/*.json", "/_next/**")
