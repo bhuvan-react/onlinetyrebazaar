@@ -20,5 +20,11 @@ public record LeadRequest(
         String tyreSize,
         String tyrePosition,
         String urgency,
-        Integer quantity) {
+        java.util.List<String> issues,
+        String usageType,
+        String budget,
+        java.util.List<String> preferences,
+        String serviceRequirement,
+        Integer quantity,
+        String tyreId) {
 }

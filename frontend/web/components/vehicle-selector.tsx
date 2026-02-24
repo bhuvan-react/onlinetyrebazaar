@@ -269,16 +269,21 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
 
     try {
       const payload = {
-        vehicleType: search.vehicleType,
+        vehicleType: search.vehicleType || "4W", // Ensure not null
         tyreType: "NEW", // Enforce NEW for buy flow
         tyreBrand: data.preferences.includes("Genuine brand only") ? "OEM/Premium" : "Any",
-        vehicleModel: `${search.make} ${search.model} ${search.variant}`,
+        vehicleModel: search.make && search.model ? `${search.make} ${search.model} ${search.variant || ''}`.trim() : "Unknown Model",
         locationArea: search.city || search.state || "Unknown",
-        locationPincode: search.pincode,
+        locationPincode: search.pincode || "000000", // Ensure not null
         // The following are additional fields that aren't strict validation constraints on the DTO but are useful to send
-        tyreSize: search.tyreSize,
+        tyreSize: search.tyreSize || undefined,
         tyrePosition: search.tyrePosition?.join(", ") || "Both",
         urgency: data.urgency,
+        issues: data.issues,
+        usageType: data.usage === "city" ? "Daily City Use" : data.usage === "highway" ? "Highway Tripping" : data.usage === "bad_roads" ? "Rural / Bad Roads" : "Commercial Use",
+        budget: data.budget < 33 ? "Budget Friendly" : data.budget < 66 ? "Balanced" : "Premium",
+        preferences: data.preferences,
+        serviceRequirement: "Tyre Replacement", // Default for Buy flow
         quantity: 1,
       }
 

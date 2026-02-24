@@ -24,14 +24,17 @@ public class LeadPurchaseService {
     private final LeadRepository leadRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository;
 
     public LeadPurchaseService(
             LeadRepository leadRepository,
             WalletRepository walletRepository,
-            TransactionRepository transactionRepository) {
+            TransactionRepository transactionRepository,
+            com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository) {
         this.leadRepository = leadRepository;
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
+        this.customerRepository = customerRepository;
     }
 
     /**
@@ -94,6 +97,34 @@ public class LeadPurchaseService {
     private LeadDetailsResponse mapToResponse(Lead lead, UUID currentDealerId) {
         boolean isOwner = lead.getSelectedDealerId() != null && lead.getSelectedDealerId().equals(currentDealerId);
 
+        String customerName = "Customer"; // Default
+        UUID customerId = lead.getCustomerId();
+        if (customerId != null) {
+            customerName = customerRepository.findById(customerId)
+                    .map(com.tyreplus.dealer.domain.entity.Customer::getName)
+                    .orElse("Customer");
+        }
+
+        java.util.List<LeadDetailsResponse.QuestionnaireItem> questionnaire = new java.util.ArrayList<>();
+
+        if (lead.getUrgency() != null && !lead.getUrgency().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("urgency", "Urgency", lead.getUrgency()));
+        }
+        if (lead.getIssues() != null && !lead.getIssues().isEmpty()) {
+            questionnaire.add(
+                    new LeadDetailsResponse.QuestionnaireItem("issues", "Issues with current tyres", lead.getIssues()));
+        }
+        if (lead.getUsageType() != null && !lead.getUsageType().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("usage", "Vehicle Usage", lead.getUsageType()));
+        }
+        if (lead.getBudget() != null && !lead.getBudget().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("budget", "Budget", lead.getBudget()));
+        }
+        if (lead.getPreferences() != null && !lead.getPreferences().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("preferences", "Specific Preferences",
+                    lead.getPreferences()));
+        }
+
         return new LeadDetailsResponse(
                 lead.getId(),
                 lead.getVehicleType(),
@@ -106,6 +137,10 @@ public class LeadPurchaseService {
                 isOwner ? lead.getCustomerMobile() : null, // reveal only if owner
                 lead.getSelectedDealerId(),
                 lead.getCreatedAt(),
-                lead.getVerifiedAt());
+                lead.getVerifiedAt(),
+                customerName,
+                lead.getServiceRequirement(),
+                lead.getTyreId(),
+                questionnaire);
     }
 }

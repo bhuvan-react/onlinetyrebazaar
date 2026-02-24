@@ -25,6 +25,16 @@ export interface LeadRequest {
     vehicleModel?: string      // optional
     locationArea: string       // required (@NotBlank)
     locationPincode: string    // required, exactly 6 digits
+    tyreSize?: string
+    tyrePosition?: string
+    urgency?: string
+    issues?: string[]
+    usageType?: string
+    budget?: string
+    preferences?: string[]
+    serviceRequirement?: string
+    quantity?: number
+    tyreId?: string | null
 }
 
 export const leadService = {

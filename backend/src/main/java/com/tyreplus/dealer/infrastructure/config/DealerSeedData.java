@@ -29,20 +29,21 @@ public class DealerSeedData implements CommandLineRunner {
     private final WalletRepository walletRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    private static final DateTimeFormatter TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale.ENGLISH);
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a",
+            java.util.Locale.ENGLISH);
 
     @Override
     @Transactional
     public void run(String... args) {
-        String testMobile = "9876543210";
-        String defaultPassword = "Test@123";
+        String testMobile = "8977757371";
+        String defaultPassword = "ushamurthy@44";
 
         // Find existing dealer or create a new one
         Dealer dealer = dealerRepository.findByPhoneNumberOrEmail(testMobile)
                 .orElseGet(() -> createNewDealer(testMobile));
 
-        // ALWAYS update the password for local testing if it's missing or needs resetting
+        // ALWAYS update the password for local testing if it's missing or needs
+        // resetting
         dealer.setPasswordHash(passwordEncoder.encode(defaultPassword));
         dealer.setVerified(true); // Ensure dealer is verified for login
 
@@ -66,8 +67,7 @@ public class DealerSeedData implements CommandLineRunner {
                 .businessHours(new BusinessHours(
                         LocalTime.parse("09:00 AM", TIME_FORMATTER),
                         LocalTime.parse("09:00 PM", TIME_FORMATTER),
-                        new HashSet<>(List.of(DayOfWeek.SUNDAY, DayOfWeek.MONDAY))
-                ))
+                        new HashSet<>(List.of(DayOfWeek.SUNDAY, DayOfWeek.MONDAY))))
                 .build();
     }
 }

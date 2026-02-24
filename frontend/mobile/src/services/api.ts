@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Android Emulator : 'http://10.0.2.2:8081'
 // iOS Simulator    : 'http://localhost:8081'
 // Physical device  : 'http://<your-LAN-IP>:8081'
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.254.192.144:8081';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.3:8081';
 
 // Generic Fetch Wrapper
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -158,6 +158,10 @@ export const submitOffer = async (leadId: string, offerDetails: any) => {
 
 export const skipLead = async (leadId: string) => {
     return apiFetch(`/api/v1/leads/${leadId}/status?status=SKIPPED`, { method: 'PUT' });
+};
+
+export const markLeadAsConverted = async (leadId: string) => {
+    return apiFetch(`/api/v1/leads/${leadId}/replace-tyre`, { method: 'PUT' });
 };
 
 // --- Wallet ---

@@ -128,7 +128,7 @@ export default function LeadsScreen() {
                     <LeadCard
                         name={item.customerName}
                         vehicle={`${item.vehicleModel} ${item.vehicleYear}`}
-                        location="N/A" // Location missing in new API response
+                        location={`${item.locationArea || ''} ${item.locationPincode || ''}`.trim() || 'N/A'}
                         date={new Date(item.createdAt).toLocaleDateString()}
                         status={item.status === 'NEW' ? 'New' : item.status === 'FOLLOW_UP' ? 'Follow-up' : item.status === 'CONVERTED' ? 'Converted' : item.status}
                         onPress={() => handleLeadPress(item.id)}

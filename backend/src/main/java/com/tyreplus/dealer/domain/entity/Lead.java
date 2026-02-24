@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Lead {
     private UUID id;
+    private UUID tyreId;
 
     // Customer Details
     private UUID customerId;
@@ -29,6 +30,17 @@ public class Lead {
     private String vehicleModel;
     private String locationArea;
     private String locationPincode;
+
+    // Questionnaire Data
+    private String tyreSize;
+    private String tyrePosition;
+    private String urgency;
+    private java.util.List<String> issues;
+    private String usageType;
+    private String budget;
+    private java.util.List<String> preferences;
+    private String serviceRequirement;
+    private Integer quantity;
 
     // Status & Flow
     private LeadStatus status;

@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Lead } from '../types';
 import { COLORS } from '../constants/theme';
-import { Phone, MapPin, User, Car, Wrench, ArrowLeft, CheckCircle, XCircle, MessageSquare } from 'lucide-react-native';
+import { Phone, MapPin, User, Car, Wrench, ArrowLeft, CheckCircle, XCircle, MessageSquare, Check } from 'lucide-react-native';
 import LeadQuestionnaireSummary from '../components/LeadQuestionnaireSummary';
 
-import { getLeadDetails, submitOffer, skipLead, getProfile } from '../services/api';
+import { getLeadDetails, submitOffer, skipLead, getProfile, markLeadAsConverted } from '../services/api';
 import { ActivityIndicator } from 'react-native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeadDetails'>;
@@ -17,6 +17,7 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
 
     const [lead, setLead] = useState<Lead | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false); // For action buttons
     const [dealerProfile, setDealerProfile] = useState<any>(null);
 
     useEffect(() => {
@@ -50,7 +51,8 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
 
             const normalizedData = {
                 ...rawData,
-                status: normalizedStatus
+                status: normalizedStatus,
+                location: `${rawData.locationArea || ''} ${rawData.locationPincode || ''}`.trim() || 'N/A'
             };
 
             setLead(normalizedData as Lead);
@@ -59,6 +61,19 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
             navigation.goBack();
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleMarkAsConverted = async () => {
+        setIsLoading(true);
+        try {
+            await markLeadAsConverted(leadId);
+            Alert.alert('Success', 'Lead marked as converted!');
+            loadLeadDetails(); // Refresh
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update lead status');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -132,6 +147,7 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
             case 'NEW_LEAD': return COLORS.teal.main;
             case 'FOLLOW_UP': return '#F97316';
             case 'BOUGHT': return '#F97316'; // Bought lead = Follow up
+            case 'DEALER_SELECTED': return '#F97316'; // Dealer selected = Follow up
             case 'CONVERTED': return '#22C55E'; // Green
             default: return COLORS.gray[500];
         }

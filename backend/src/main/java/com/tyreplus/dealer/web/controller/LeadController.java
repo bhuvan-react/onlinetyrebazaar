@@ -82,4 +82,12 @@ public class LeadController {
         statusService.updateStatus(leadId, dealer.getId(), status);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Mark Tyre Replaced", description = "Dealers use this to indicate the customer came and replaced tyres. Transitions lead to CONVERTED.")
+    @PutMapping("/{leadId}/replace-tyre")
+    public ResponseEntity<Void> replaceTyre(@PathVariable UUID leadId,
+            @AuthenticationPrincipal DealerDetails dealer) {
+        statusService.markAsConverted(leadId, dealer.getId());
+        return ResponseEntity.ok().build();
+    }
 }

@@ -30,6 +30,9 @@ public class LeadJpaEntity {
     @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
     private UUID id;
 
+    @Column(name = "tyre_id", columnDefinition = "UUID")
+    private UUID tyreId;
+
     @Column(name = "customer_id", columnDefinition = "UUID")
     private UUID customerId;
 
@@ -58,6 +61,35 @@ public class LeadJpaEntity {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private LeadStatus status;
+
+    @Column(name = "tyre_size")
+    private String tyreSize;
+
+    @Column(name = "tyre_position")
+    private String tyrePosition;
+
+    @Column(name = "urgency")
+    private String urgency;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "issues", columnDefinition = "jsonb")
+    private java.util.List<String> issues;
+
+    @Column(name = "usage_type")
+    private String usageType;
+
+    @Column(name = "budget")
+    private String budget;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "preferences", columnDefinition = "jsonb")
+    private java.util.List<String> preferences;
+
+    @Column(name = "service_requirement")
+    private String serviceRequirement;
+
+    @Column(name = "quantity")
+    private Integer quantity;
 
     @Column(name = "selected_dealer_id", columnDefinition = "UUID")
     private UUID selectedDealerId;

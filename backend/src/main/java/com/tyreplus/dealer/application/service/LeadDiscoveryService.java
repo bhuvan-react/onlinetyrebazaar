@@ -39,6 +39,16 @@ public class LeadDiscoveryService {
                 .vehicleModel(request.vehicleModel())
                 .locationArea(request.locationArea())
                 .locationPincode(request.locationPincode())
+                .tyreSize(request.tyreSize())
+                .tyrePosition(request.tyrePosition())
+                .urgency(request.urgency())
+                .issues(request.issues())
+                .usageType(request.usageType())
+                .budget(request.budget())
+                .preferences(request.preferences())
+                .serviceRequirement(request.serviceRequirement())
+                .quantity(request.quantity() != null ? request.quantity() : 1)
+                .tyreId(request.tyreId() != null ? UUID.fromString(request.tyreId()) : null)
                 .status(LeadStatus.VERIFIED) // Customer OTP authenticated, so verified immediately
                 .build();
 
@@ -117,6 +127,34 @@ public class LeadDiscoveryService {
                 && lead.getSelectedDealerId().equals(currentDealerId);
         String visibleMobile = isSelectedDealer ? lead.getCustomerMobile() : null;
 
+        String customerName = "Customer"; // Default
+        UUID customerId = lead.getCustomerId();
+        if (customerId != null) {
+            customerName = customerRepository.findById(customerId)
+                    .map(Customer::getName)
+                    .orElse("Customer");
+        }
+
+        java.util.List<LeadDetailsResponse.QuestionnaireItem> questionnaire = new java.util.ArrayList<>();
+
+        if (lead.getUrgency() != null && !lead.getUrgency().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("urgency", "Urgency", lead.getUrgency()));
+        }
+        if (lead.getIssues() != null && !lead.getIssues().isEmpty()) {
+            questionnaire.add(
+                    new LeadDetailsResponse.QuestionnaireItem("issues", "Issues with current tyres", lead.getIssues()));
+        }
+        if (lead.getUsageType() != null && !lead.getUsageType().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("usage", "Vehicle Usage", lead.getUsageType()));
+        }
+        if (lead.getBudget() != null && !lead.getBudget().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("budget", "Budget", lead.getBudget()));
+        }
+        if (lead.getPreferences() != null && !lead.getPreferences().isEmpty()) {
+            questionnaire.add(new LeadDetailsResponse.QuestionnaireItem("preferences", "Specific Preferences",
+                    lead.getPreferences()));
+        }
+
         return new LeadDetailsResponse(
                 lead.getId(),
                 lead.getVehicleType(),
@@ -129,6 +167,10 @@ public class LeadDiscoveryService {
                 visibleMobile,
                 lead.getSelectedDealerId(),
                 lead.getCreatedAt(),
-                lead.getVerifiedAt());
+                lead.getVerifiedAt(),
+                customerName,
+                lead.getServiceRequirement(),
+                lead.getTyreId(),
+                questionnaire);
     }
 }

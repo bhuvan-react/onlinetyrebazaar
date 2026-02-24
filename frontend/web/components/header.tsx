@@ -45,15 +45,7 @@ export function Header() {
             <span className="text-xl font-bold text-[#1F2937]">Online Tyre Bazaar</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-[#6B7280] hover:text-[#0D9488] transition-colors font-medium">
-              Home
-            </Link>
-            <Link href="#" className="text-[#6B7280] hover:text-[#0D9488] transition-colors font-medium">
-              About
-            </Link>
-          </nav>
+
 
           {/* Auth Section */}
           <div className="hidden md:flex items-center gap-4">
@@ -150,12 +142,6 @@ export function Header() {
             className="md:hidden border-t border-[#E5E7EB] bg-white"
           >
             <nav className="px-4 py-4 space-y-2">
-              <Link href="/" className="block px-4 py-2 text-[#1F2937] hover:bg-[#F9FAFB] rounded-lg">
-                Home
-              </Link>
-              <Link href="#" className="block px-4 py-2 text-[#1F2937] hover:bg-[#F9FAFB] rounded-lg">
-                About
-              </Link>
               <div className="pt-4 border-t border-[#E5E7EB] space-y-2">
                 {isAuthenticated && user ? (
                   <>

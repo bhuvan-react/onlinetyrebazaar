@@ -69,9 +69,11 @@ export interface QuestionnaireItem {
 export interface Lead {
     id: string;
     customerName: string;
+    customerPhone?: string; // unlocked for selected dealer
     location: string;
     vehicleModel: string;
     serviceRequest: string;
-    status: 'NEW' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD' | 'CONTACTED' | 'LOST';
+    tyreId?: string;
+    status: 'NEW' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD' | 'CONTACTED' | 'LOST' | 'DEALER_SELECTED' | 'VERIFIED';
     questionnaire?: QuestionnaireItem[];
 }

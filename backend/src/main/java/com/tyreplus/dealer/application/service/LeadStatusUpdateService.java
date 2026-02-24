@@ -33,4 +33,22 @@ public class LeadStatusUpdateService {
         lead.setStatus(newStatus);
         leadRepository.save(lead);
     }
+
+    @Transactional
+    public void markAsConverted(UUID leadId, UUID dealerId) {
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+
+        if (!dealerId.equals(lead.getSelectedDealerId())) {
+            throw new IllegalStateException("Unauthorized: This lead belongs to another dealer.");
+        }
+
+        // Typically, only leads that are DEALER_SELECTED or FOLLOW_UP can be converted
+        if (lead.getStatus() != LeadStatus.DEALER_SELECTED && lead.getStatus() != LeadStatus.FOLLOW_UP) {
+            throw new IllegalStateException("Cannot convert lead in current status: " + lead.getStatus());
+        }
+
+        lead.setStatus(LeadStatus.CONVERTED);
+        leadRepository.save(lead);
+    }
 }

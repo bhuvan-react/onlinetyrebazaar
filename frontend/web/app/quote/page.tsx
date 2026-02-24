@@ -2,11 +2,21 @@
 
 import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
-import { CheckCircle2, ClipboardList, Coins, SearchCheck, CalendarCheck } from "lucide-react"
+import { CheckCircle2, ClipboardList, Coins, SearchCheck, CalendarCheck, Loader2 } from "lucide-react"
 import { tyreService } from "@/lib/services/tyre-service"
+import { leadService } from "@/lib/services/lead-service"
 import type { Tyre } from "@/lib/tyre-data"
+import { OtpModal } from "@/components/otp-modal"
+import { useAppSelector, useAppDispatch } from "@/lib/hooks"
+import { initializeAuth } from "@/lib/store"
+
+function mapVehicleType(v: string | null): string {
+    if (v === "2W") return "TWO_WHEELER"
+    if (v === "3W") return "THREE_WHEELER"
+    return "FOUR_WHEELER"
+}
 
 function QuoteContent() {
     const searchParams = useSearchParams()
@@ -14,6 +24,27 @@ function QuoteContent() {
     const variant = searchParams.get("variant") || "new"
     const [tyre, setTyre] = useState<Tyre | null>(null)
     const [loading, setLoading] = useState(true)
+
+    // Auth & search state
+    const dispatch = useAppDispatch()
+    const { isAuthenticated, isLoading: authLoading } = useAppSelector((state) => state.auth)
+    const searchState = useAppSelector((state) => state.search)
+
+    // Lead submission state
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [leadSubmitted, setLeadSubmitted] = useState(false)
+    const [submitError, setSubmitError] = useState<string | null>(null)
+    const [showOtpModal, setShowOtpModal] = useState(false)
+
+    // Fallback fields if Redux state is missing
+    const [localPincode, setLocalPincode] = useState("")
+    const [localCity, setLocalCity] = useState("")
+    const [localVehicleType, setLocalVehicleType] = useState<"2W" | "3W" | "4W">("4W")
+    const [showFallbackForm, setShowFallbackForm] = useState(false)
+
+    useEffect(() => {
+        dispatch(initializeAuth())
+    }, [dispatch])
 
     useEffect(() => {
         if (!tyreId) {
@@ -31,7 +62,75 @@ function QuoteContent() {
         })
     }, [tyreId])
 
-    if (loading) {
+    const buildLeadRequest = useCallback((tyre: Tyre) => {
+        const pincode = searchState.pincode || localPincode || "000000"
+        const city = searchState.city || localCity || "Unknown"
+        const vType = searchState.vehicleType || localVehicleType
+        const make = searchState.make || ""
+        const model = searchState.model || ""
+        const vehicleModel = [make, model].filter(Boolean).join(" ") || tyre.model || tyre.pattern || tyre.brand
+
+        return {
+            vehicleType: mapVehicleType(vType),
+            tyreType: variant === "new" ? "NEW" : "USED",
+            tyreBrand: tyre.brand,
+            vehicleModel,
+            locationArea: city,
+            locationPincode: pincode.padEnd(6, "0").slice(0, 6),
+            tyreId: tyreId,
+        }
+    }, [searchState, localPincode, localCity, localVehicleType, variant])
+
+    const submitLead = useCallback(async (tyre: Tyre) => {
+        setIsSubmitting(true)
+        setSubmitError(null)
+        try {
+            const request = buildLeadRequest(tyre)
+            const response = await leadService.createLead(request)
+            if (response.data || response.status === 200) {
+                setLeadSubmitted(true)
+            } else {
+                setSubmitError("Failed to submit lead. Please try again.")
+            }
+        } catch {
+            setSubmitError("Failed to submit lead. Please try again.")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }, [buildLeadRequest])
+
+    const handleConfirmLead = () => {
+        if (!tyre) return
+        const needsFallback = !searchState.pincode && !localPincode
+        if (needsFallback) {
+            setShowFallbackForm(true)
+            return
+        }
+        if (!isAuthenticated) {
+            setShowOtpModal(true)
+            return
+        }
+        submitLead(tyre)
+    }
+
+    const handleOtpSuccess = useCallback(() => {
+        setShowOtpModal(false)
+        if (tyre) {
+            submitLead(tyre)
+        }
+    }, [tyre, submitLead])
+
+    const handleFallbackSubmit = () => {
+        if (localPincode.length !== 6) return
+        setShowFallbackForm(false)
+        if (!isAuthenticated) {
+            setShowOtpModal(true)
+            return
+        }
+        if (tyre) submitLead(tyre)
+    }
+
+    if (loading || authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FFF1F2]">
                 <div className="animate-pulse flex flex-col items-center gap-4">
@@ -78,13 +177,23 @@ function QuoteContent() {
                     <p className="text-sm text-gray-600 ml-8">Get Best Prices from Verified Dealers</p>
                 </div>
 
-                {/* Success Banner */}
-                <div className="bg-[#A7F3D0] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
-                    <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
-                    <p className="text-[#065F46] font-medium">
-                        <span className="font-bold">Interest Submitted!</span> Review details below and confirm to get quotes from verified dealers.
-                    </p>
-                </div>
+                {/* Lead submitted success banner */}
+                {leadSubmitted ? (
+                    <div className="bg-[#D1FAE5] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
+                        <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-[#065F46] font-bold">Lead Submitted Successfully!</p>
+                            <p className="text-[#065F46] text-sm mt-0.5">Verified dealers will contact you shortly with the best quotes.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-[#A7F3D0] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
+                        <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
+                        <p className="text-[#065F46] font-medium">
+                            <span className="font-bold">Interest Submitted!</span> Review details below and confirm to get quotes from verified dealers.
+                        </p>
+                    </div>
+                )}
 
                 {/* Product Card */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm mb-6 flex flex-col sm:flex-row items-center gap-6">
@@ -179,18 +288,87 @@ function QuoteContent() {
                         ))}
                     </div>
 
-                    {/* Back to Search */}
-                    <div className="mt-8 text-center">
+                    {/* Fallback pincode form */}
+                    {showFallbackForm && !leadSubmitted && (
+                        <div className="mt-6 p-4 border border-gray-200 rounded-xl bg-[#F9FAFB]">
+                            <p className="text-sm font-semibold text-[#1F2937] mb-3">Enter your pincode to proceed</p>
+                            <div className="flex gap-2">
+                                <select
+                                    value={localVehicleType}
+                                    onChange={(e) => setLocalVehicleType(e.target.value as "2W" | "3W" | "4W")}
+                                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0D9488]"
+                                >
+                                    <option value="4W">4 Wheeler</option>
+                                    <option value="2W">2 Wheeler</option>
+                                    <option value="3W">3 Wheeler</option>
+                                </select>
+                                <input
+                                    type="tel"
+                                    value={localPincode}
+                                    onChange={(e) => setLocalPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                    placeholder="6-digit pincode"
+                                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0D9488]"
+                                    maxLength={6}
+                                />
+                                <button
+                                    onClick={handleFallbackSubmit}
+                                    disabled={localPincode.length !== 6}
+                                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                    style={{ backgroundColor: accentColor }}
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error state */}
+                    {submitError && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                            {submitError}
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 justify-center">
                         <a
                             href="/search"
-                            className="inline-block px-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90"
-                            style={{ backgroundColor: accentColor }}
+                            className="inline-block px-6 py-2.5 rounded-xl font-semibold text-sm border transition-all hover:opacity-80"
+                            style={{ borderColor: accentColor, color: accentColor }}
                         >
                             ← Browse More Tyres
                         </a>
+
+                        {!leadSubmitted && (
+                            <button
+                                onClick={handleConfirmLead}
+                                disabled={isSubmitting}
+                                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90 disabled:opacity-60"
+                                style={{ backgroundColor: accentColor }}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Confirm &amp; Submit Lead
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
             </main>
+
+            {/* OTP Modal */}
+            <OtpModal
+                isOpen={showOtpModal}
+                onClose={() => setShowOtpModal(false)}
+                onSuccess={handleOtpSuccess}
+            />
         </div>
     )
 }
