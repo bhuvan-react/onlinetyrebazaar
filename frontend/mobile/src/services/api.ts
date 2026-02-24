@@ -1,31 +1,74 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Configuration
 // Android Emulator : 'http://10.0.2.2:8081'
 // iOS Simulator    : 'http://localhost:8081'
 // Physical device  : 'http://<your-LAN-IP>:8081'
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.3:8081';
+const getBaseUrl = () => {
+    if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+    
+    // Default fallback for development
+    // Using LAN IP 192.168.1.7 for physical iPhone/Android devices
+    return 'http://192.168.1.7:8081';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 // Generic Fetch Wrapper
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log(`[API REQUEST] ${options.method || 'GET'} ${url}`);
-    if (options.body) {
-        console.log('[API BODY]', options.body);
-    }
 
-    const token = await AsyncStorage.getItem('userToken');
-    const headers: HeadersInit = {
+    let token = await AsyncStorage.getItem('userToken');
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
         headers,
         ...options,
     });
 
     console.log(`[API RESPONSE] Status: ${response.status}`);
+
+    // Handle 401 Unauthorized - Attempt Token Refresh
+    if (response.status === 401 && !endpoint.includes('/refresh')) {
+        const refreshToken = await AsyncStorage.getItem('userRefreshToken');
+        if (refreshToken) {
+            try {
+                console.log('[API] Attempting token refresh...');
+                const refreshResponse = await fetch(`${API_BASE_URL}/api/v1/auth/dealer/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Refresh-Token': refreshToken
+                    }
+                });
+
+                if (refreshResponse.ok) {
+                    const data = await refreshResponse.json();
+                    const newToken = data.token;
+                    await AsyncStorage.setItem('userToken', newToken);
+                    
+                    // Retry original request
+                    headers['Authorization'] = `Bearer ${newToken}`;
+                    response = await fetch(url, {
+                        headers,
+                        ...options,
+                    });
+                    console.log(`[API RETRY] Status: ${response.status}`);
+                } else {
+                    console.warn('[API] Refresh failed, logging out');
+                    await logout();
+                    // Optional: navigation reset logic could be triggered here
+                }
+            } catch (err) {
+                console.error('[API] Refresh error', err);
+            }
+        }
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -40,12 +83,28 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
 // --- Auth ---
 
-export const sendOtp = async (mobile: string) => {
+/**
+ * Send OTP for Quick Login (Existing Users)
+ */
+export const sendQuickOtp = async (mobile: string) => {
     return apiFetch('/api/v1/auth/dealer/quick/send-otp', {
         method: 'POST',
         body: JSON.stringify({ mobile }),
     });
 };
+
+/**
+ * Send OTP for New Business Registration
+ */
+export const sendRegisterOtp = async (mobile: string) => {
+    return apiFetch('/api/v1/auth/dealer/register/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ mobile }),
+    });
+};
+
+// Keep existing sendOtp for compatibility
+export const sendOtp = sendQuickOtp;
 
 export const verifyOtp = async (mobile: string, otp: string) => {
     const response = await apiFetch<any>('/api/v1/auth/dealer/quick/verify-otp', {
@@ -54,6 +113,9 @@ export const verifyOtp = async (mobile: string, otp: string) => {
     });
     if (response.token) {
         await AsyncStorage.setItem('userToken', response.token);
+        if (response.refreshToken) {
+            await AsyncStorage.setItem('userRefreshToken', response.refreshToken);
+        }
     }
     return response;
 };
@@ -65,6 +127,9 @@ export const loginWithPassword = async (identifier: string, password: string) =>
     });
     if (response.token) {
         await AsyncStorage.setItem('userToken', response.token);
+        if (response.refreshToken) {
+            await AsyncStorage.setItem('userRefreshToken', response.refreshToken);
+        }
     }
     return response;
 };
@@ -76,6 +141,9 @@ export const registerDealer = async (data: any) => {
     });
     if (response.token) {
         await AsyncStorage.setItem('userToken', response.token);
+        if (response.refreshToken) {
+            await AsyncStorage.setItem('userRefreshToken', response.refreshToken);
+        }
     }
     return response;
 };
@@ -87,12 +155,16 @@ export const registerRoadsideDealer = async (data: any) => {
     });
     if (response.token) {
         await AsyncStorage.setItem('userToken', response.token);
+        if (response.refreshToken) {
+            await AsyncStorage.setItem('userRefreshToken', response.refreshToken);
+        }
     }
     return response;
 };
 
 export const logout = async () => {
     await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userRefreshToken');
 };
 
 // --- Profile ---

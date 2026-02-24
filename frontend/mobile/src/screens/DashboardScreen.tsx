@@ -88,11 +88,12 @@ export default function DashboardScreen() {
                 {data?.recentLeads.map((lead: any) => (
                     <LeadCard
                         key={lead.id}
-                        name={lead.name}
+                        name={lead.customerName}
                         vehicle={lead.vehicle}
+                        tyreSize={lead.tyreSize}
                         location={lead.location}
-                        date={lead.date}
-                        status={lead.status}
+                        date={lead.timestamp}
+                        status={lead.status === 'NEW' ? 'New' : lead.status === 'FOLLOW_UP' ? 'Follow-up' : lead.status === 'CONVERTED' ? 'Converted' : lead.status}
                         onPress={() => handleLeadPress(lead.id)}
                     />
                 ))}

@@ -66,14 +66,27 @@ export interface QuestionnaireItem {
     type?: 'text' | 'tags' | 'boolean_list'; // Optional hint for UI rendering if needed, but we can infer from answer type
 }
 
+export interface AssociatedTyreInfo {
+    id: string;
+    brand: string;
+    pattern: string;
+    size: string;
+    type: string;
+    price: number;
+    imageUrl?: string;
+}
+
 export interface Lead {
     id: string;
     customerName: string;
     customerPhone?: string; // unlocked for selected dealer
     location: string;
     vehicleModel: string;
+    vehicleYear?: string;
+    tyreSize?: string;
     serviceRequest: string;
     tyreId?: string;
+    tyreInfo?: AssociatedTyreInfo;
     status: 'NEW' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD' | 'CONTACTED' | 'LOST' | 'DEALER_SELECTED' | 'VERIFIED';
     questionnaire?: QuestionnaireItem[];
 }

@@ -12,10 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
@@ -48,6 +45,21 @@ public class CustomerAuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(result);
+    }
+
+    @Operation(summary = "Refresh Token", description = "Uses a valid Refresh Token (cookie or header) to issue a new Access Token.")
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @CookieValue(value = "refresh_token", required = false) String cookieToken,
+            @RequestHeader(value = "X-Refresh-Token", required = false) String headerToken) {
+
+        String refreshToken = headerToken != null ? headerToken : cookieToken;
+
+        if (refreshToken == null) {
+            throw new IllegalArgumentException("Refresh token missing");
+        }
+
+        return ResponseEntity.ok(authService.refresh(refreshToken));
     }
 
     private ResponseCookie buildRefreshCookie(String refreshToken) {

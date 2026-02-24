@@ -6,6 +6,7 @@ export const API_CONFIG = {
             CUSTOMER: {
                 SEND_OTP: "/auth/customer/send-otp",
                 VERIFY_OTP: "/auth/customer/verify-otp",
+                REFRESH: "/auth/customer/refresh",
             },
         },
         CUSTOMER_LEADS: {

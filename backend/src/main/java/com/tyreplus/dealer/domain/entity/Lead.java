@@ -28,6 +28,7 @@ public class Lead {
     private String tyreType; // New, Used
     private String tyreBrand;
     private String vehicleModel;
+    private String vehicleYear;
     private String locationArea;
     private String locationPincode;
 

@@ -7,6 +7,7 @@ import com.tyreplus.dealer.domain.entity.Lead;
 import com.tyreplus.dealer.domain.entity.LeadStatus;
 import com.tyreplus.dealer.domain.repository.CustomerRepository;
 import com.tyreplus.dealer.domain.repository.LeadRepository;
+import com.tyreplus.dealer.domain.repository.TyreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +25,7 @@ public class LeadDiscoveryService {
 
     private final LeadRepository leadRepository;
     private final CustomerRepository customerRepository;
+    private final TyreRepository tyreRepository;
 
     @Transactional
     public LeadDetailsResponse createLead(LeadRequest request, String customerMobile) {
@@ -37,6 +39,7 @@ public class LeadDiscoveryService {
                 .tyreType(request.tyreType())
                 .tyreBrand(request.tyreBrand())
                 .vehicleModel(request.vehicleModel())
+                .vehicleYear(request.vehicleYear())
                 .locationArea(request.locationArea())
                 .locationPincode(request.locationPincode())
                 .tyreSize(request.tyreSize())
@@ -52,6 +55,24 @@ public class LeadDiscoveryService {
                 .status(LeadStatus.VERIFIED) // Customer OTP authenticated, so verified immediately
                 .build();
 
+        Lead savedLead = leadRepository.save(lead);
+        return mapToResponse(savedLead);
+    }
+
+    @Transactional
+    public LeadDetailsResponse updateTyreSelection(UUID leadId, UUID tyreId, String customerMobile) {
+        Customer customer = customerRepository.findByMobile(customerMobile)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+
+        // Ensure the customer actually owns this lead
+        if (!lead.getCustomerId().equals(customer.getId())) {
+            throw new IllegalStateException("You do not have permission to modify this lead.");
+        }
+
+        lead.setTyreId(tyreId);
         Lead savedLead = leadRepository.save(lead);
         return mapToResponse(savedLead);
     }
@@ -155,14 +176,25 @@ public class LeadDiscoveryService {
                     lead.getPreferences()));
         }
 
+        LeadDetailsResponse.AssociatedTyreInfo tyreInfo = null;
+        if (lead.getTyreId() != null) {
+            tyreInfo = tyreRepository.findById(lead.getTyreId())
+                    .map(t -> new LeadDetailsResponse.AssociatedTyreInfo(
+                            t.getId(), t.getBrand(), t.getPattern(), t.getSize(), t.getType(), t.getPrice(),
+                            t.getImageUrl()))
+                    .orElse(null);
+        }
+
         return new LeadDetailsResponse(
                 lead.getId(),
                 lead.getVehicleType(),
                 lead.getTyreType(),
                 lead.getTyreBrand(),
                 lead.getVehicleModel(),
+                lead.getVehicleYear(),
                 lead.getLocationArea(),
                 lead.getLocationPincode(),
+                lead.getTyreSize(),
                 lead.getStatus(),
                 visibleMobile,
                 lead.getSelectedDealerId(),
@@ -171,6 +203,7 @@ public class LeadDiscoveryService {
                 customerName,
                 lead.getServiceRequirement(),
                 lead.getTyreId(),
-                questionnaire);
+                questionnaire,
+                tyreInfo);
     }
 }

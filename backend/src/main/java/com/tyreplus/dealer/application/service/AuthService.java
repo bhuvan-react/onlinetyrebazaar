@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.Optional;
 import java.util.HashSet;
 import java.util.UUID;
 
@@ -161,18 +162,35 @@ public class AuthService {
     }
 
     public LoginResponse refresh(String refreshToken) {
+        UUID userId = refreshTokenService.validate(refreshToken);
 
-        UUID dealerId = refreshTokenService.validate(refreshToken);
+        // Try Dealer repository first
+        Optional<Dealer> dealerOpt = dealerRepository.findById(userId);
+        if (dealerOpt.isPresent()) {
+            Dealer dealer = dealerOpt.get();
+            String accessToken = jwtUtil.generateToken(
+                    dealer.getContactDetails().phoneNumber(),
+                    dealer.getId().toString(),
+                    "dealer");
+            return new LoginResponse(accessToken, refreshToken, toUserInfo(dealer));
+        }
 
-        Dealer dealer = dealerRepository.findById(dealerId)
-                .orElseThrow(() -> new UserNotFoundException("Dealer not found"));
+        // Try Customer repository
+        Optional<Customer> customerOpt = customerRepository.findById(userId);
+        if (customerOpt.isPresent()) {
+            Customer customer = customerOpt.get();
+            String accessToken = jwtUtil.generateToken(
+                    customer.getMobile(),
+                    customer.getId().toString(),
+                    "customer");
+            return new LoginResponse(accessToken, refreshToken, new LoginResponse.UserInfo(
+                    customer.getId().toString(),
+                    customer.getName(),
+                    "customer",
+                    null));
+        }
 
-        String accessToken = jwtUtil.generateToken(
-                dealer.getContactDetails().phoneNumber(),
-                dealer.getId().toString(),
-                "dealer");
-
-        return new LoginResponse(accessToken, refreshToken, toUserInfo(dealer));
+        throw new UserNotFoundException("User not found");
     }
 
     public void logout(String refreshToken) {
@@ -268,16 +286,23 @@ public class AuthService {
 
         // 2. Find or Create Customer
         Customer customer = customerRepository.findByMobile(request.mobile())
-                .orElseGet(() -> createGuestCustomer(request.mobile()));
+                .orElseGet(() -> createCustomer(request.mobile(), request.name()));
+
+        // Update name if provided and different (optional, but good for returning
+        // users)
+        if (request.name() != null && !request.name().isBlank() && !"Guest".equals(request.name())) {
+            customer.setName(request.name());
+            customerRepository.save(customer);
+        }
 
         // 3. Issue Tokens
         return issueCustomerTokens(customer);
     }
 
-    private Customer createGuestCustomer(String mobile) {
+    private Customer createCustomer(String mobile, String name) {
         Customer customer = Customer.builder()
                 .mobile(mobile)
-                .name("Guest")
+                .name(name != null && !name.isBlank() ? name : "Guest")
                 .build();
 
         return customerRepository.save(customer);
@@ -290,10 +315,7 @@ public class AuthService {
                 customer.getId().toString(),
                 "customer"); // ROLE is customer
 
-        // Depending on whether we want long-term sessions for customers
-        // For MVP, using a dummy UUID for refresh token as they log in via OTP each
-        // time
-        String refreshToken = UUID.randomUUID().toString();
+        String refreshToken = refreshTokenService.create(customer.getId());
 
         return new LoginResponse(
                 accessToken,

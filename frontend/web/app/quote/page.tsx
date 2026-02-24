@@ -10,7 +10,7 @@ import { leadService } from "@/lib/services/lead-service"
 import type { Tyre } from "@/lib/tyre-data"
 import { OtpModal } from "@/components/otp-modal"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { initializeAuth } from "@/lib/store"
+import { initializeAuth, initializeSearch } from "@/lib/store"
 
 function mapVehicleType(v: string | null): string {
     if (v === "2W") return "TWO_WHEELER"
@@ -44,6 +44,7 @@ function QuoteContent() {
 
     useEffect(() => {
         dispatch(initializeAuth())
+        dispatch(initializeSearch())
     }, [dispatch])
 
     useEffect(() => {
@@ -85,8 +86,16 @@ function QuoteContent() {
         setIsSubmitting(true)
         setSubmitError(null)
         try {
-            const request = buildLeadRequest(tyre)
-            const response = await leadService.createLead(request)
+            let response;
+            if (searchState.leadId) {
+                // UPDATE existing lead
+                response = await leadService.selectTyreForLead(searchState.leadId, tyre.id)
+            } else {
+                // CREATE new lead (fallback)
+                const request = buildLeadRequest(tyre)
+                response = await leadService.createLead(request)
+            }
+
             if (response.data || response.status === 200) {
                 setLeadSubmitted(true)
             } else {
@@ -97,7 +106,7 @@ function QuoteContent() {
         } finally {
             setIsSubmitting(false)
         }
-    }, [buildLeadRequest])
+    }, [buildLeadRequest, searchState.leadId])
 
     const handleConfirmLead = () => {
         if (!tyre) return

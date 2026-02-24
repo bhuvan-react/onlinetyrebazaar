@@ -44,10 +44,67 @@ export async function fetchWithMockFallback<T>(
             }
         }
 
-        const response = await fetch(url, {
+        let response = await fetch(url, {
             ...options,
             headers,
         })
+
+        // Handle 401 Unauthorized - Attempt Token Refresh
+        if (response.status === 401 && typeof window !== "undefined" && !endpoint.includes("/refresh")) {
+            const refreshToken = localStorage.getItem("tyreplus_refresh_token")
+            const userStr = localStorage.getItem("tyreplus_user")
+
+            if (refreshToken && refreshToken !== "undefined" && refreshToken !== "null" && !refreshToken.startsWith("mock_")) {
+                try {
+                    // Determine refresh endpoint based on role
+                    let refreshUrl = `${API_CONFIG.BASE_URL}/auth/customer/refresh`
+                    if (userStr) {
+                        try {
+                            const user = JSON.parse(userStr)
+                            if (user.role === "dealer") {
+                                refreshUrl = `${API_CONFIG.BASE_URL}/auth/dealer/refresh`
+                            }
+                        } catch (e) {
+                            console.error("Error parsing user for refresh role", e)
+                        }
+                    }
+
+                    const refreshResponse = await fetch(refreshUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Refresh-Token": refreshToken
+                        }
+                    })
+
+                    if (refreshResponse.ok) {
+                        const refreshData = await refreshResponse.json()
+                        const newToken: string = refreshData.token
+
+                        localStorage.setItem("tyreplus_token", newToken)
+
+                        // Retry original request with new token
+                        const retryHeaders = { ...headers } as Record<string, string>
+                        retryHeaders["Authorization"] = `Bearer ${newToken}`
+                        response = await fetch(url, {
+                            ...options,
+                            headers: retryHeaders,
+                        })
+                    } else {
+                        // Refresh failed, logout
+                        localStorage.removeItem("tyreplus_token")
+                        localStorage.removeItem("tyreplus_refresh_token")
+                        localStorage.removeItem("tyreplus_user")
+                        // Optional: trigger a real logout or redirect
+                        if (typeof window !== "undefined") {
+                            window.location.href = "/"
+                        }
+                    }
+                } catch (e) {
+                    console.error("Token refresh failed", e)
+                }
+            }
+        }
 
         if (!response.ok) {
             throw new Error(`API Error: ${response.statusText}`)

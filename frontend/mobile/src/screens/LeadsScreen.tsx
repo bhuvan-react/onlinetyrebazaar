@@ -127,7 +127,8 @@ export default function LeadsScreen() {
                 renderItem={({ item }) => (
                     <LeadCard
                         name={item.customerName}
-                        vehicle={`${item.vehicleModel} ${item.vehicleYear}`}
+                        vehicle={`${item.vehicleModel}${item.vehicleYear ? ' ' + item.vehicleYear : ''}`}
+                        tyreSize={item.tyreSize || (item.tyreInfo ? item.tyreInfo.size : undefined)}
                         location={`${item.locationArea || ''} ${item.locationPincode || ''}`.trim() || 'N/A'}
                         date={new Date(item.createdAt).toLocaleDateString()}
                         status={item.status === 'NEW' ? 'New' : item.status === 'FOLLOW_UP' ? 'Follow-up' : item.status === 'CONVERTED' ? 'Converted' : item.status}

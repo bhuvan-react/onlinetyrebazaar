@@ -6,13 +6,14 @@ import { COLORS } from '../constants/theme';
 interface LeadCardProps {
     name: string;
     vehicle: string;
+    tyreSize?: string;
     location: string;
     date: string;
     status: 'New' | 'Follow-up' | 'Converted';
     onPress: () => void;
 }
 
-export default function LeadCard({ name, vehicle, location, date, status, onPress }: LeadCardProps) {
+export default function LeadCard({ name, vehicle, tyreSize, location, date, status, onPress }: LeadCardProps) {
     const getStatusColor = () => {
         switch (status) {
             case 'New': return COLORS.teal.main;
@@ -28,6 +29,7 @@ export default function LeadCard({ name, vehicle, location, date, status, onPres
                 <View>
                     <Text style={styles.name}>{name}</Text>
                     <Text style={styles.vehicle}>{vehicle}</Text>
+                    {tyreSize && <Text style={styles.tyreSize}>{tyreSize}</Text>}
                 </View>
                 <View style={[styles.badge, { backgroundColor: getStatusColor() }]}>
                     <Text style={styles.badgeText}>{status}</Text>
@@ -85,8 +87,13 @@ const styles = StyleSheet.create({
     },
     vehicle: {
         fontSize: 14,
-        color: COLORS.gray[600],
+        color: COLORS.black,
         fontWeight: '500',
+    },
+    tyreSize: {
+        fontSize: 13,
+        color: COLORS.gray[600],
+        marginTop: 2,
     },
     badge: {
         paddingHorizontal: 8,

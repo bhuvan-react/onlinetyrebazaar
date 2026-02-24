@@ -4,6 +4,8 @@ import com.tyreplus.dealer.application.dto.DashboardResponse;
 import com.tyreplus.dealer.domain.entity.Lead;
 import com.tyreplus.dealer.domain.entity.LeadStatus;
 import com.tyreplus.dealer.domain.entity.Wallet;
+import com.tyreplus.dealer.domain.entity.Customer;
+import com.tyreplus.dealer.domain.repository.CustomerRepository;
 import com.tyreplus.dealer.domain.repository.LeadRepository;
 import com.tyreplus.dealer.domain.repository.WalletRepository;
 import org.springframework.stereotype.Service;
@@ -24,10 +26,13 @@ public class DashboardService {
 
     private final WalletRepository walletRepository;
     private final LeadRepository leadRepository;
+    private final CustomerRepository customerRepository;
 
-    public DashboardService(WalletRepository walletRepository, LeadRepository leadRepository) {
+    public DashboardService(WalletRepository walletRepository, LeadRepository leadRepository,
+            CustomerRepository customerRepository) {
         this.walletRepository = walletRepository;
         this.leadRepository = leadRepository;
+        this.customerRepository = customerRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,8 +61,10 @@ public class DashboardService {
         List<DashboardResponse.RecentLead> recentLeads = recentLeadsRaw.stream()
                 .map(lead -> new DashboardResponse.RecentLead(
                         lead.getId().toString(),
-                        lead.getCustomerMobile() != null ? lead.getCustomerMobile() : "Hidden", // Or placeholder name
+                        getCustomerName(lead.getCustomerId()),
                         formatVehicleInfo(lead),
+                        lead.getTyreSize() != null ? lead.getTyreSize() : "Not Specified",
+                        formatLocation(lead),
                         lead.getStatus().name(),
                         formatTimestamp(lead.getCreatedAt())))
                 .collect(Collectors.toList());
@@ -72,6 +79,20 @@ public class DashboardService {
         String model = lead.getVehicleModel() != null ? lead.getVehicleModel() : "Unknown Vehicle";
         String type = lead.getVehicleType() != null ? " (" + lead.getVehicleType() + ")" : "";
         return model + type;
+    }
+
+    private String formatLocation(Lead lead) {
+        String area = lead.getLocationArea() != null ? lead.getLocationArea() : "";
+        String pincode = lead.getLocationPincode() != null ? lead.getLocationPincode() : "";
+        return (area + " " + pincode).trim();
+    }
+
+    private String getCustomerName(UUID customerId) {
+        if (customerId == null)
+            return "Guest";
+        return customerRepository.findById(customerId)
+                .map(Customer::getName)
+                .orElse("Guest");
     }
 
     private String formatTimestamp(LocalDateTime timestamp) {

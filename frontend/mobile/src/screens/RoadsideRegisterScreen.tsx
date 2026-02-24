@@ -13,7 +13,7 @@ import { RootStackParamList, RoadsideFormData } from '../types';
 import Header from '../components/Header';
 import OTPModal from '../components/OTPModal';
 import { COLORS } from '../constants/theme';
-import { registerRoadsideDealer, sendOtp } from '../services/api';
+import { registerRoadsideDealer, sendRegisterOtp } from '../services/api';
 
 type RoadsideRegisterScreenNavigationProp = NativeStackNavigationProp<
     RootStackParamList,
@@ -53,7 +53,7 @@ export default function RoadsideRegisterScreen({ navigation }: Props) {
             return;
         }
         try {
-            await sendOtp(formData.mobile);
+            await sendRegisterOtp(formData.mobile);
             setOtpModalVisible(true);
         } catch (error) {
             Alert.alert('Error', 'Failed to send OTP.');

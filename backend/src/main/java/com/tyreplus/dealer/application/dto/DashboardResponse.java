@@ -7,23 +7,21 @@ import java.util.List;
  * Java 21 Record following DDD principles.
  */
 public record DashboardResponse(
-        int walletBalance,
-        DashboardStats stats,
-        List<RecentLead> recentLeads
-) {
-    public record DashboardStats(
-            int leadsToday,
-            int conversionRate
-    ) {
-    }
-    
-    public record RecentLead(
-            String id,
-            String customerName,
-            String vehicle,
-            String status,
-            String timestamp
-    ) {
-    }
-}
+                int walletBalance,
+                DashboardStats stats,
+                List<RecentLead> recentLeads) {
+        public record DashboardStats(
+                        int leadsToday,
+                        int conversionRate) {
+        }
 
+        public record RecentLead(
+                        String id,
+                        String customerName,
+                        String vehicle,
+                        String tyreSize,
+                        String location,
+                        String status,
+                        String timestamp) {
+        }
+}

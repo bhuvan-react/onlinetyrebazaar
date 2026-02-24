@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { setVehicleType, setTyrePosition, setMake, setModel, setVariant, setPincode, setCity, setState, setUser, setTyreSize } from "@/lib/store"
+import { setVehicleType, setTyrePosition, setMake, setModel, setVariant, setPincode, setCity, setState, setUser, setTyreSize, setLeadId } from "@/lib/store"
 import { type VehicleType } from "@/lib/vehicle-data"
 import { fetchLocationDetails } from "@/lib/geocode"
 import { ChevronDown, Check, ShoppingBag, Tag, MapPin, Loader2, Phone, ArrowRight } from "lucide-react"
@@ -289,6 +289,7 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
 
       const response = await leadService.createLead(payload)
       if (response.data) {
+        dispatch(setLeadId(response.data.id))
         onSearch("buy")
       } else {
         alert("Failed to create tyre requirement. Please try again.")
@@ -357,7 +358,7 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
     setIsSellLoading(true)
 
     try {
-      const response = await authService.verifyCustomerOtp(sellMobile, otpValue)
+      const response = await authService.verifyCustomerOtp(sellMobile, otpValue, name)
 
       if (response.data.token) {
         // Save user to store
@@ -373,6 +374,8 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
           }
         }
 
+        localStorage.setItem("tyreplus_token", response.data.token)
+        localStorage.setItem("tyreplus_refresh_token", response.data.refreshToken)
         localStorage.setItem("tyreplus_user", JSON.stringify(user))
         dispatch(setUser(user as any)) // Cast to any to handle type mismatch since User might have stricter fields
 
@@ -458,21 +461,33 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
                         <p className="text-gray-500">Enter your mobile number to get started</p>
                       </div>
 
-                      <div className="relative mb-4">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B7280]">+91</span>
-                        <input
-                          type="tel"
-                          value={sellMobile}
-                          onChange={(e) => setSellMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                          placeholder="Enter 10-digit number"
-                          className="w-full pl-12 pr-4 py-4 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all text-lg"
-                        />
+                      <div className="space-y-4 mb-6">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter your full name"
+                            className="w-full px-4 py-4 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all text-lg"
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B7280]">+91</span>
+                          <input
+                            type="tel"
+                            value={sellMobile}
+                            onChange={(e) => setSellMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                            placeholder="Enter 10-digit number"
+                            className="w-full pl-12 pr-4 py-4 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all text-lg"
+                          />
+                        </div>
                       </div>
 
                       <button
                         onClick={handleSellPhoneSubmit}
-                        disabled={sellMobile.length !== 10 || isSellLoading}
-                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${sellMobile.length === 10 && !isSellLoading
+                        disabled={sellMobile.length !== 10 || name.trim().length < 2 || isSellLoading}
+                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${sellMobile.length === 10 && name.trim().length >= 2 && !isSellLoading
                           ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white hover:opacity-90 shadow-lg shadow-teal-500/30"
                           : "bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
                           }`}
@@ -861,6 +876,18 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
                       )}
 
                       {/* Name Input */}
+                      {search.tyreSize && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                          <label className="block text-sm font-medium text-[#6B7280] mb-2">Your Name 👤</label>
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter your full name"
+                            className="w-full px-4 py-3 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all"
+                          />
+                        </motion.div>
+                      )}
 
                       {/* Mobile Number Input */}
                       {search.tyreSize && name.trim().length >= 2 && (

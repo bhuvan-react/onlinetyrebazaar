@@ -72,7 +72,7 @@ export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, name }: Otp
     setIsLoading(true)
 
     try {
-      const response = await authService.verifyCustomerOtp(phone, otpValue)
+      const response = await authService.verifyCustomerOtp(phone, otpValue, name)
 
       // Check if token exists (LoginResponse)
       if (response.data.token) {
@@ -88,6 +88,7 @@ export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, name }: Otp
 
         localStorage.setItem("tyreplus_user", JSON.stringify(user))
         localStorage.setItem("tyreplus_token", response.data.token)
+        localStorage.setItem("tyreplus_refresh_token", response.data.refreshToken)
 
         dispatch(setUser(user))
 

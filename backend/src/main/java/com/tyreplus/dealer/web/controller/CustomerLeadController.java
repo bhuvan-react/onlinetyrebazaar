@@ -45,6 +45,15 @@ public class CustomerLeadController {
         return ResponseEntity.ok(discoveryService.getCustomerLeads(customer.getUsername()));
     }
 
+    @Operation(summary = "Update Tyre Selection", description = "Updates an existing lead with a specifically chosen tyre.")
+    @PutMapping("/{leadId}/tyre/{tyreId}")
+    public ResponseEntity<LeadDetailsResponse> updateTyreSelection(
+            @PathVariable UUID leadId,
+            @PathVariable UUID tyreId,
+            @AuthenticationPrincipal CustomerDetails customer) {
+        return ResponseEntity.ok(discoveryService.updateTyreSelection(leadId, tyreId, customer.getUsername()));
+    }
+
     @Operation(summary = "Get Lead Offers", description = "Retrieves all dealer offers for a specific lead.")
     @GetMapping("/{leadId}/offers")
     public ResponseEntity<List<OfferResponse>> getLeadOffers(

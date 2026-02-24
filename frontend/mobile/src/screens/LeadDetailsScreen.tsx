@@ -199,11 +199,44 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
                     <View style={styles.row}>
                         <Car size={20} color={COLORS.gray[500]} />
                         <View>
-                            <Text style={styles.label}>Model</Text>
-                            <Text style={styles.value}>{lead.vehicleModel}</Text>
+                            <Text style={styles.label}>Model & Year</Text>
+                            <Text style={styles.value}>{lead.vehicleModel}{lead.vehicleYear ? ` (${lead.vehicleYear})` : ''}</Text>
                         </View>
                     </View>
                 </View>
+
+                {/* Tyre Size Card */}
+                {lead.tyreSize && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Required Tyre Size</Text>
+                        <View style={styles.row}>
+                            <View>
+                                <Text style={styles.label}>Size</Text>
+                                <Text style={styles.value}>{lead.tyreSize}</Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* Specific Tyre Info Card (If customer selected a specific tyre) */}
+                {lead.tyreInfo && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Requested Specific Tyre</Text>
+                        <View style={styles.row}>
+                            <View>
+                                <Text style={styles.label}>Brand & Pattern</Text>
+                                <Text style={styles.value}>{lead.tyreInfo.brand} {lead.tyreInfo.pattern}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.row}>
+                            <View>
+                                <Text style={styles.label}>Price</Text>
+                                <Text style={styles.value}>₹ {lead.tyreInfo.price}</Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
 
                 {/* Questionnaire Summary */}
                 {lead.questionnaire && (

@@ -31,6 +31,7 @@ interface SearchState {
   city: string | null
   state: string | null
   tyreSize: string | null
+  leadId: string | null
 }
 
 // Initial states
@@ -50,6 +51,7 @@ const initialSearchState: SearchState = {
   city: null,
   state: null,
   tyreSize: null,
+  leadId: null,
 }
 
 // Auth Slice
@@ -132,6 +134,24 @@ const searchSlice = createSlice({
     setTyreSize: (state, action: PayloadAction<string | null>) => {
       state.tyreSize = action.payload
     },
+    setLeadId: (state, action: PayloadAction<string | null>) => {
+      state.leadId = action.payload
+      if (typeof window !== "undefined") {
+        if (action.payload) {
+          localStorage.setItem("tyreplus_lead_id", action.payload)
+        } else {
+          localStorage.removeItem("tyreplus_lead_id")
+        }
+      }
+    },
+    initializeSearch: (state) => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("tyreplus_lead_id")
+        if (stored) {
+          state.leadId = stored
+        }
+      }
+    },
     resetSearch: (state) => {
       state.vehicleType = null
       state.tyrePosition = []
@@ -142,12 +162,16 @@ const searchSlice = createSlice({
       state.city = null
       state.state = null
       state.tyreSize = null
+      state.leadId = null
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("tyreplus_lead_id")
+      }
     },
   },
 })
 
 export const { setUser, logout, setLoading, initializeAuth } = authSlice.actions
-export const { setVehicleType, setTyrePosition, setMake, setModel, setVariant, setPincode, setCity, setState, setTyreSize, resetSearch } = searchSlice.actions
+export const { setVehicleType, setTyrePosition, setMake, setModel, setVariant, setPincode, setCity, setState, setTyreSize, setLeadId, initializeSearch, resetSearch } = searchSlice.actions
 
 // Store
 export const makeStore = () => {

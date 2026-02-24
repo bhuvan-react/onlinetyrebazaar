@@ -13,7 +13,7 @@ import { RootStackParamList, FullDealerFormData } from '../types';
 import Header from '../components/Header';
 import OTPModal from '../components/OTPModal';
 import { COLORS } from '../constants/theme';
-import { registerDealer, sendOtp } from '../services/api';
+import { registerDealer, sendRegisterOtp } from '../services/api';
 
 type FullDealerRegisterScreenNavigationProp = NativeStackNavigationProp<
     RootStackParamList,
@@ -138,7 +138,7 @@ export default function FullDealerRegisterScreen({ navigation }: Props) {
     const handleSubmit = async () => {
         if (validateStep3()) {
             try {
-                await sendOtp(formData.mobile);
+                await sendRegisterOtp(formData.mobile);
                 setOtpModalVisible(true);
             } catch (error) {
                 Alert.alert('Error', 'Failed to send OTP. Please check your network and mobile number.');

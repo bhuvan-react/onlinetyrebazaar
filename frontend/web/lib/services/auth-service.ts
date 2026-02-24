@@ -31,13 +31,13 @@ export const authService = {
         )
     },
 
-    verifyCustomerOtp: async (mobile: string, otp: string) => {
+    verifyCustomerOtp: async (mobile: string, otp: string, name?: string) => {
         return fetchWithMockFallback<LoginResponse>(
             API_CONFIG.ENDPOINTS.AUTH.CUSTOMER.VERIFY_OTP,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mobile, otp }),
+                body: JSON.stringify({ mobile, otp, name }),
             }
         )
     }

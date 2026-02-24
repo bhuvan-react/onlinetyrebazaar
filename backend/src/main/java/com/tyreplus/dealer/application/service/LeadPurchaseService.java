@@ -11,6 +11,7 @@ import com.tyreplus.dealer.domain.repository.TransactionRepository;
 import com.tyreplus.dealer.domain.repository.WalletRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tyreplus.dealer.domain.repository.TyreRepository;
 
 import java.util.UUID;
 
@@ -25,16 +26,19 @@ public class LeadPurchaseService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository;
+    private final TyreRepository tyreRepository;
 
     public LeadPurchaseService(
             LeadRepository leadRepository,
             WalletRepository walletRepository,
             TransactionRepository transactionRepository,
-            com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository) {
+            com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository,
+            TyreRepository tyreRepository) {
         this.leadRepository = leadRepository;
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.customerRepository = customerRepository;
+        this.tyreRepository = tyreRepository;
     }
 
     /**
@@ -125,14 +129,25 @@ public class LeadPurchaseService {
                     lead.getPreferences()));
         }
 
+        LeadDetailsResponse.AssociatedTyreInfo tyreInfo = null;
+        if (lead.getTyreId() != null) {
+            tyreInfo = tyreRepository.findById(lead.getTyreId())
+                    .map(t -> new LeadDetailsResponse.AssociatedTyreInfo(
+                            t.getId(), t.getBrand(), t.getPattern(), t.getSize(), t.getType(), t.getPrice(),
+                            t.getImageUrl()))
+                    .orElse(null);
+        }
+
         return new LeadDetailsResponse(
                 lead.getId(),
                 lead.getVehicleType(),
                 lead.getTyreType(),
                 lead.getTyreBrand(),
                 lead.getVehicleModel(),
+                lead.getVehicleYear(),
                 lead.getLocationArea(),
                 lead.getLocationPincode(),
+                lead.getTyreSize(),
                 lead.getStatus(),
                 isOwner ? lead.getCustomerMobile() : null, // reveal only if owner
                 lead.getSelectedDealerId(),
@@ -141,6 +156,7 @@ public class LeadPurchaseService {
                 customerName,
                 lead.getServiceRequirement(),
                 lead.getTyreId(),
-                questionnaire);
+                questionnaire,
+                tyreInfo);
     }
 }

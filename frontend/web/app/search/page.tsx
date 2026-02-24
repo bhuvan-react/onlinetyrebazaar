@@ -4,7 +4,7 @@ import { Suspense, useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { setVehicleType, setMake, setModel } from "@/lib/store"
+import { setVehicleType, setMake, setModel, initializeAuth, initializeSearch } from "@/lib/store"
 import { FiltersSidebar } from "@/components/filters-sidebar"
 import { TyreCard } from "@/components/tyre-card"
 import { TyreCardSkeleton } from "@/components/tyre-card-skeleton"
@@ -47,6 +47,12 @@ function SearchContent() {
     // If no specific vehicle selected (or data missing), show all unique sizes from our tyre data
     return getAllUniqueSizes()
   }, [search.make, search.model, search.variant])
+
+  // Initialize auth and search
+  useEffect(() => {
+    dispatch(initializeAuth())
+    dispatch(initializeSearch())
+  }, [dispatch])
 
   // Fetch tyres
   useEffect(() => {

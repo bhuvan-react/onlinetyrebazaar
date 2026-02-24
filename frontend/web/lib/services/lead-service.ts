@@ -8,8 +8,10 @@ export interface Lead {
     tyreType: string
     tyreBrand: string
     vehicleModel: string | null
+    vehicleYear: string | null
     locationArea: string
     locationPincode: string
+    tyreSize: string | null
     status: string           // LeadStatus: NEW | VERIFIED | FOLLOW_UP | CONVERTED | REJECTED | DUPLICATE | OFFER_RECEIVED | DEALER_SELECTED | CLOSED
     customerMobile: string | null   // only visible to the selected dealer
     selectedDealerId: string | null
@@ -23,6 +25,7 @@ export interface LeadRequest {
     tyreType: string           // required (@NotBlank)
     tyreBrand: string          // required (@NotBlank)
     vehicleModel?: string      // optional
+    vehicleYear?: string       // optional
     locationArea: string       // required (@NotBlank)
     locationPincode: string    // required, exactly 6 digits
     tyreSize?: string
@@ -40,6 +43,10 @@ export interface LeadRequest {
 export const leadService = {
     createLead: async (data: LeadRequest) => {
         return apiClient.post<Lead>(API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE, data)
+    },
+
+    selectTyreForLead: async (leadId: string, tyreId: string) => {
+        return apiClient.put<Lead>(`${API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE}/${leadId}/tyre/${tyreId}`)
     },
 
     // Backend returns Lead[] (bare array, not wrapped in { leads: [...] })
