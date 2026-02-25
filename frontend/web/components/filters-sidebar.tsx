@@ -64,26 +64,14 @@ export function FiltersSidebar({
   }, [])
 
   const isBrandChecked = (brand: string) => {
-    if (selectedBrands.length === 0) return brandCounts[brand] > 0
     return selectedBrands.includes(brand)
   }
 
   const handleBrandToggle = (brand: string) => {
-    if (selectedBrands.length === 0) {
-      if (brandCounts[brand] > 0) {
-        // Unchecking an implicitly checked brand
-        const others = brands.filter((b) => b !== brand && brandCounts[b] > 0)
-        setSelectedBrands(others.length === 0 ? ["__NONE__"] : others)
-      } else {
-        setSelectedBrands([brand])
-      }
+    if (selectedBrands.includes(brand)) {
+      setSelectedBrands(selectedBrands.filter((b) => b !== brand))
     } else {
-      if (selectedBrands.includes(brand)) {
-        const next = selectedBrands.filter((b) => b !== brand)
-        setSelectedBrands(next.length === 0 ? ["__NONE__"] : next)
-      } else {
-        setSelectedBrands([...selectedBrands.filter((b) => b !== "__NONE__"), brand])
-      }
+      setSelectedBrands([...selectedBrands, brand])
     }
   }
 

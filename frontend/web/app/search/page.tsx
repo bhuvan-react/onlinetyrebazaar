@@ -78,7 +78,6 @@ function SearchContent() {
       try {
         const filters = {
           size: search.tyreSize || undefined,
-          brand: selectedBrands.length > 0 ? selectedBrands[0] : undefined,
           categoryId: searchParams.get("categoryId") || undefined,
         }
         const response = await tyreService.getAllTyres(filters)
