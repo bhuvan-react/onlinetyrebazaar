@@ -206,15 +206,17 @@ async function suiteCustomerAuth() {
   });
 
   // 2.4 Verify OTP — success & LoginResponse shape
-  await test("CustomerAuth", "POST /verify-otp succeeds with correct OTP", async () => {
+  await test("CustomerAuth", "POST /verify-otp succeeds with correct OTP and returns user info", async () => {
     assert(state.customerOtp, "OTP must be obtained from send-otp test first");
+    const name = "Paradise"; // send a name in the payload
     const r = await request("/auth/customer/verify-otp", {
       method: "POST",
-      body: JSON.stringify({ mobile: state.customerMobile, otp: state.customerOtp }),
+      body: JSON.stringify({ mobile: state.customerMobile, otp: state.customerOtp, name }),
     });
     assertEqual(r.status, 200, "status");
     assertHasFields(r.data, ["token", "refreshToken", "user"], "LoginResponse");
     assertHasFields(r.data.user, ["id", "name", "role"], "LoginResponse.user");
+    assertEqual(r.data.user.name, name, "returned name should match request");
     state.customerToken = r.data.token;
     assert(state.customerToken, "Access token must not be empty");
   });

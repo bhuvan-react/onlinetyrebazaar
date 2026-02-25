@@ -281,6 +281,9 @@ public class AuthService {
      */
     @Transactional
     public LoginResponse verifyCustomerOtp(VerifyOtpRequest request) {
+        // log the incoming name to help debug mapping issues (see BE-FIX below)
+        System.out.println("[AuthService] verifyCustomerOtp received name='" + request.name() + "'");
+
         // 1. Validate OTP
         otpService.validateOtp(request.mobile(), request.otp());
 
