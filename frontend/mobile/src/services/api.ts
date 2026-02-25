@@ -9,8 +9,8 @@ const getBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
     
     // Default fallback for development
-    // Using LAN IP 192.168.1.7 for physical iPhone/Android devices
-    return 'http://192.168.1.7:8081';
+    // Using LAN IP 192.168.1.4 for physical iPhone/Android devices
+    return 'http://192.168.1.4:8081';
 };
 
 const API_BASE_URL = getBaseUrl();
