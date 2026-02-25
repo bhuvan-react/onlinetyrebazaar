@@ -10,6 +10,8 @@ public interface UserVehicleRepository {
 
     UserVehicle save(UserVehicle userVehicle);
 
+    List<UserVehicle> saveAll(List<UserVehicle> vehicles);
+
     void deleteById(UUID id);
 
     Optional<UserVehicle> findById(UUID id);

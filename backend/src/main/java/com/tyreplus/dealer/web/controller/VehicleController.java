@@ -2,7 +2,7 @@ package com.tyreplus.dealer.web.controller;
 
 import com.tyreplus.dealer.application.service.VehicleService;
 import com.tyreplus.dealer.domain.entity.UserVehicle;
-import com.tyreplus.dealer.infrastructure.security.DealerDetails;
+import com.tyreplus.dealer.infrastructure.security.CustomerDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,21 +57,22 @@ public class VehicleController {
 
     @GetMapping
     @Operation(summary = "Get My Vehicles", description = "Get list of vehicles added to user's garage", security = @SecurityRequirement(name = "Bearer Authentication"))
-    public ResponseEntity<List<UserVehicle>> getUserVehicles(@AuthenticationPrincipal DealerDetails dealer) {
-        return ResponseEntity.ok(vehicleService.getUserVehicles(dealer.getId()));
+    public ResponseEntity<List<UserVehicle>> getUserVehicles(@AuthenticationPrincipal CustomerDetails customer) {
+        return ResponseEntity.ok(vehicleService.getUserVehicles(customer.getId()));
     }
 
     @PostMapping
     @Operation(summary = "Add Vehicle", description = "Add a vehicle to garage", security = @SecurityRequirement(name = "Bearer Authentication"))
-    public ResponseEntity<UserVehicle> addVehicle(@AuthenticationPrincipal DealerDetails dealer,
+    public ResponseEntity<UserVehicle> addVehicle(@AuthenticationPrincipal CustomerDetails customer,
             @RequestBody UserVehicle vehicle) {
-        return ResponseEntity.ok(vehicleService.addUserVehicle(dealer.getId(), vehicle));
+        return ResponseEntity.ok(vehicleService.addUserVehicle(customer.getId(), vehicle));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete Vehicle", description = "Remove a vehicle from garage", security = @SecurityRequirement(name = "Bearer Authentication"))
-    public ResponseEntity<Void> deleteVehicle(@AuthenticationPrincipal DealerDetails dealer, @PathVariable UUID id) {
-        vehicleService.deleteUserVehicle(dealer.getId(), id);
+    public ResponseEntity<Void> deleteVehicle(@AuthenticationPrincipal CustomerDetails customer,
+            @PathVariable UUID id) {
+        vehicleService.deleteUserVehicle(customer.getId(), id);
         return ResponseEntity.noContent().build();
     }
 }

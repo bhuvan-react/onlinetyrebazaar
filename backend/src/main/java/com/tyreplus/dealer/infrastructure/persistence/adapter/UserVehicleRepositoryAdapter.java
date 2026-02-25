@@ -39,6 +39,12 @@ public class UserVehicleRepositoryAdapter implements UserVehicleRepository {
     }
 
     @Override
+    public List<UserVehicle> saveAll(List<UserVehicle> vehicles) {
+        List<UserVehicleJpaEntity> entities = vehicles.stream().map(this::toJpa).toList();
+        return repository.saveAll(entities).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public Optional<UserVehicle> findById(UUID id) {
         return repository.findById(id).map(this::toDomain);
     }

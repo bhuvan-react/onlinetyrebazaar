@@ -8,12 +8,14 @@ interface VehicleCardProps {
     vehicle: {
         id: string
         vehicleName: string
-        registrationNumber: string
+        registrationNumber?: string
         tyreSize: string
         isPrimary: boolean
         make?: string
         model?: string
         variant?: string
+        vehicleType?: string
+        year?: string
     }
     onDelete?: (id: string) => void
     onEdit?: (vehicle: any) => void

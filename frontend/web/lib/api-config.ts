@@ -19,6 +19,7 @@ export const API_CONFIG = {
             MAKES: "/vehicles/makes",
             MODELS: "/vehicles/models",
             VARIANTS: "/vehicles/variants",
+            TYRE_SIZES: "/vehicles/tyre-sizes",
             GET_ALL: "/vehicles",
             ADD: "/vehicles",
             DELETE: (id: string) => `/vehicles/${id}`,

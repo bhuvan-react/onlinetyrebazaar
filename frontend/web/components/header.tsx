@@ -88,10 +88,10 @@ export function Header() {
                           <ShoppingBag className="w-4 h-4 text-[#6B7280]" />
                           My Orders
                         </Link>
-                        <button className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
+                        {/* <button className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
                           <Settings className="w-4 h-4 text-[#6B7280]" />
                           Settings
-                        </button>
+                        </button> */}
                         <button
                           onClick={handleLogout}
                           className="w-full px-4 py-2 text-left text-sm text-[#0D9488] hover:bg-[#F0FDFA] flex items-center gap-3"

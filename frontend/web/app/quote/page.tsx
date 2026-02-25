@@ -360,7 +360,7 @@ function QuoteContent() {
                             ← Browse More Tyres
                         </a>
 
-                        {!leadSubmitted && (
+                        {/* {!leadSubmitted && (
                             <button
                                 onClick={handleConfirmLead}
                                 disabled={isSubmitting}
@@ -379,7 +379,7 @@ function QuoteContent() {
                                     </>
                                 )}
                             </button>
-                        )}
+                        )} */}
                     </div>
                 </div>
             </main>

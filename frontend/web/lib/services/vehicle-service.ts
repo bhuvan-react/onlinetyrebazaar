@@ -4,12 +4,14 @@ import { API_CONFIG } from "../api-config"
 export interface Vehicle {
     id: string
     vehicleName: string
-    registrationNumber: string
+    registrationNumber?: string
     tyreSize: string
     isPrimary: boolean
     make?: string
     model?: string
     variant?: string
+    vehicleType?: string
+    year?: string
 }
 
 export const vehicleService = {
@@ -57,7 +59,7 @@ export const vehicleService = {
 
     getTyreSizes: async (make: string, model: string, variant: string) => {
         return fetchWithMockFallback<{ sizes: string[] }>(
-            `/vehicles/tyre-sizes?make=${make}&model=${model}&variant=${variant}`,
+            `${API_CONFIG.ENDPOINTS.VEHICLES.TYRE_SIZES}?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&variant=${encodeURIComponent(variant)}`,
             {}
         )
     }

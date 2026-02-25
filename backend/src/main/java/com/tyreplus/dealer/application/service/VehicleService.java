@@ -45,7 +45,14 @@ public class VehicleService {
     @Transactional
     public UserVehicle addUserVehicle(UUID dealerId, UserVehicle vehicle) {
         vehicle.setDealerId(dealerId);
-        // Ensure only one primary? Logic could be here.
+
+        // If this vehicle is set as primary, demote all other vehicles for this dealer
+        if (vehicle.isPrimary()) {
+            List<UserVehicle> existing = userVehicleRepository.findByDealerId(dealerId);
+            existing.forEach(v -> v.setPrimary(false));
+            userVehicleRepository.saveAll(existing);
+        }
+
         return userVehicleRepository.save(vehicle);
     }
 
