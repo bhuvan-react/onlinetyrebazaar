@@ -50,8 +50,19 @@ public class CustomerLeadController {
     public ResponseEntity<LeadDetailsResponse> updateTyreSelection(
             @PathVariable UUID leadId,
             @PathVariable UUID tyreId,
+            @RequestParam(required = false, defaultValue = "NEW") String tyreType,
             @AuthenticationPrincipal CustomerDetails customer) {
-        return ResponseEntity.ok(discoveryService.updateTyreSelection(leadId, tyreId, customer.getUsername()));
+        return ResponseEntity
+                .ok(discoveryService.updateTyreSelection(leadId, tyreId, tyreType, customer.getUsername()));
+    }
+
+    @Operation(summary = "Update Tyre Type Only", description = "Eagerly updates just tyreType (NEW/USED) when customer picks a variant — so dealers see it immediately.")
+    @PutMapping("/{leadId}/type")
+    public ResponseEntity<LeadDetailsResponse> updateTyreType(
+            @PathVariable UUID leadId,
+            @RequestParam String tyreType,
+            @AuthenticationPrincipal CustomerDetails customer) {
+        return ResponseEntity.ok(discoveryService.updateTyreType(leadId, tyreType, customer.getUsername()));
     }
 
     @Operation(summary = "Get Lead Offers", description = "Retrieves all dealer offers for a specific lead.")

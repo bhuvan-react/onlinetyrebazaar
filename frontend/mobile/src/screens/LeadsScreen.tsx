@@ -9,7 +9,7 @@ import { Filter, ChevronDown } from 'lucide-react-native';
 import LeadCard from '../components/LeadCard';
 import { getLeads, getUnlockedLeads } from '../services/api';
 
-const FILTERS = ['All', 'New', 'Follow-up', 'Converted', 'Unlocked'];
+const FILTERS = ['All', 'Fresh', 'Follow-up', 'Converted', 'Unlocked'];
 const SORT_OPTIONS = ['Date (Newest)', 'Date (Oldest)', 'Priority'];
 
 export default function LeadsScreen() {
@@ -129,6 +129,7 @@ export default function LeadsScreen() {
                         name={item.customerName}
                         vehicle={`${item.vehicleModel}${item.vehicleYear ? ' ' + item.vehicleYear : ''}`}
                         tyreSize={item.tyreSize || (item.tyreInfo ? item.tyreInfo.size : undefined)}
+                        tyreType={item.tyreType}
                         location={`${item.locationArea || ''} ${item.locationPincode || ''}`.trim() || 'N/A'}
                         date={new Date(item.createdAt).toLocaleDateString()}
                         status={item.status === 'NEW' ? 'New' : item.status === 'FOLLOW_UP' ? 'Follow-up' : item.status === 'CONVERTED' ? 'Converted' : item.status}

@@ -55,8 +55,11 @@ public class DashboardService {
                 ? (int) ((convertedCount * 100) / totalPurchased)
                 : 0;
 
-        // 4. Get Recent Leads (Limit to 10 at the DB level)
-        List<Lead> recentLeadsRaw = leadRepository.findRecentSelections(dealerId, 10);
+        // 4. Get Recent Fresh Leads (available to all dealers — not just
+        // dealer-selected ones)
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                0, 5, org.springframework.data.domain.Sort.by("createdAt").descending());
+        List<Lead> recentLeadsRaw = leadRepository.findLeadsWithFilters(null, dealerId, pageable).getContent();
 
         List<DashboardResponse.RecentLead> recentLeads = recentLeadsRaw.stream()
                 .map(lead -> new DashboardResponse.RecentLead(
@@ -64,6 +67,7 @@ public class DashboardService {
                         getCustomerName(lead.getCustomerId()),
                         formatVehicleInfo(lead),
                         lead.getTyreSize() != null ? lead.getTyreSize() : "Not Specified",
+                        lead.getTyreType() != null ? lead.getTyreType() : "NEW",
                         formatLocation(lead),
                         lead.getStatus().name(),
                         formatTimestamp(lead.getCreatedAt())))

@@ -4,13 +4,14 @@ import { Suspense, useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { setVehicleType, setMake, setModel, initializeAuth, initializeSearch } from "@/lib/store"
+import { setVehicleType, setMake, setModel, setVariant, setTyreSize, setPincode, initializeAuth, initializeSearch } from "@/lib/store"
 import { FiltersSidebar } from "@/components/filters-sidebar"
 import { TyreCard } from "@/components/tyre-card"
 import { TyreCardSkeleton } from "@/components/tyre-card-skeleton"
 import { MobileFiltersSheet } from "@/components/mobile-filters-sheet"
 import { tyreService } from "@/lib/services/tyre-service"
-import { type Tyre, vehicleTyreSizes, getAllUniqueSizes } from "@/lib/tyre-data"
+import { filterService } from "@/lib/services/filter-service"
+import { type Tyre, vehicleTyreSizes } from "@/lib/tyre-data"
 import { ChevronRight, SlidersHorizontal, Grid, List } from "lucide-react"
 import {
   Select,
@@ -38,14 +39,21 @@ function SearchContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(12)
   const [tyres, setTyres] = useState<Tyre[]>([])
+  
+  // Available filter settings from backend
+  const [availableSizes, setAvailableSizes] = useState<string[]>([])
 
-  // Determine available tyre sizes based on vehicle selection
-  const availableSizes = useMemo(() => {
+  // Fetch available sizes on mount or based on specific logic
+  useEffect(() => {
+    // If we have selected a fully qualified vehicle, use the mapped sizes
     if (search.make && search.model && search.variant && vehicleTyreSizes[search.make]?.[search.model]?.[search.variant]) {
-      return vehicleTyreSizes[search.make][search.model][search.variant]
+      setAvailableSizes(vehicleTyreSizes[search.make][search.model][search.variant])
+    } else {
+      // Otherwise get all unique sizes from the backend
+      filterService.getSizes().then(sizes => {
+        setAvailableSizes(sizes)
+      })
     }
-    // If no specific vehicle selected (or data missing), show all unique sizes from our tyre data
-    return getAllUniqueSizes()
   }, [search.make, search.model, search.variant])
 
   // Initialize auth and search
@@ -56,6 +64,15 @@ function SearchContent() {
 
   // Fetch tyres
   useEffect(() => {
+    // Wait for Redux to hydrate from URL parameters before fetching
+    const urlSize = searchParams.get("size")
+    const urlMake = searchParams.get("make")
+    const urlModel = searchParams.get("model")
+    
+    if (urlSize && search.tyreSize !== urlSize) return
+    if (urlMake && search.make !== urlMake) return
+    if (urlModel && search.model !== urlModel) return
+
     const fetchTyres = async () => {
       setIsLoading(true)
       try {
@@ -73,12 +90,15 @@ function SearchContent() {
       }
     }
     fetchTyres()
-  }, [search.make, search.model, search.variant, search.tyreSize, search.vehicleType, selectedBrands])
+  }, [search.make, search.model, search.variant, search.tyreSize, search.vehicleType, selectedBrands, searchParams])
 
   // Handle query params
   useEffect(() => {
     const make = searchParams.get("make")
     const model = searchParams.get("model")
+    const variant = searchParams.get("variant")
+    const size = searchParams.get("size")
+    const pincode = searchParams.get("pincode")
     const brand = searchParams.get("brand")
 
     if (make) {
@@ -87,6 +107,17 @@ function SearchContent() {
       if (model) {
         dispatch(setModel(model))
       }
+      if (variant) {
+        dispatch(setVariant(variant))
+      }
+    }
+
+    if (size) {
+      dispatch(setTyreSize(size))
+    }
+
+    if (pincode) {
+      dispatch(setPincode(pincode))
     }
 
     if (brand) {
@@ -137,7 +168,7 @@ function SearchContent() {
 
     // Filter by rating
     if (minRating > 0) {
-      result = result.filter((t) => t.rating >= minRating)
+      result = result.filter((t) => (t.rating || 0) >= minRating)
     }
 
     // Sort
@@ -149,10 +180,10 @@ function SearchContent() {
         result.sort((a, b) => b.price - a.price)
         break
       case "rating":
-        result.sort((a, b) => b.rating - a.rating)
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0))
         break
       default:
-        result.sort((a, b) => b.reviewCount - a.reviewCount)
+        result.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
     }
 
     return result
@@ -174,7 +205,7 @@ function SearchContent() {
 
     // Filter by rating
     if (minRating > 0) {
-      result = result.filter((t) => t.rating >= minRating)
+      result = result.filter((t) => (t.rating || 0) >= minRating)
     }
 
     // Filter by tyre size

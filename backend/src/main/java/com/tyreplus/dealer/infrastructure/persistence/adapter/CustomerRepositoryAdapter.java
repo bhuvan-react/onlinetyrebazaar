@@ -23,7 +23,17 @@ public class CustomerRepositoryAdapter implements CustomerRepository {
 
     @Override
     public Customer save(Customer customer) {
-        CustomerJpaEntity entity = mapper.toJpaEntity(customer);
+        CustomerJpaEntity entity;
+        if (customer.getId() != null) {
+            entity = jpaRepository.findById(customer.getId())
+                    .orElse(mapper.toJpaEntity(customer));
+            // Update fields that are mapped from Domain
+            entity.setMobile(customer.getMobile());
+            entity.setName(customer.getName());
+        } else {
+            entity = mapper.toJpaEntity(customer);
+        }
+
         CustomerJpaEntity saved = jpaRepository.save(entity);
         return mapper.toDomainEntity(saved);
     }

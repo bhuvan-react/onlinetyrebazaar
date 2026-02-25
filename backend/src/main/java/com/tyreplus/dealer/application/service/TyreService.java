@@ -29,6 +29,10 @@ public class TyreService {
         return tyreRepository.getAllBrands();
     }
 
+    public List<String> getAllSizes() {
+        return tyreRepository.getAllSizes();
+    }
+
     public List<String> getSizesByBrand(String brand) {
         return tyreRepository.getSizesByBrand(brand);
     }

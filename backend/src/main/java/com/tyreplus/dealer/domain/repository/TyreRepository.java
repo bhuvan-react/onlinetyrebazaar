@@ -14,5 +14,7 @@ public interface TyreRepository {
 
     List<String> getSizesByBrand(String brand);
 
+    List<String> getAllSizes();
+
     List<String> getPatternsByBrandAndSize(String brand, String size);
 }

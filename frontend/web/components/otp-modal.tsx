@@ -14,14 +14,16 @@ interface OtpModalProps {
   onClose: () => void
   onSuccess: () => void
   initialPhone?: string
-  name?: string
+  // optional initial name passed from parent
+  initialName?: string
 }
 
-export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, name }: OtpModalProps) {
+export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, initialName }: OtpModalProps) {
   const dispatch = useAppDispatch()
   const [step, setStep] = useState<"phone" | "otp" | "success">(initialPhone ? "otp" : "phone")
   const [phone, setPhone] = useState(initialPhone || "")
   const [otp, setOtp] = useState(["", "", "", ""])
+  const [name, setName] = useState(initialName || "") // Initialize with propName or empty string
   const [isLoading, setIsLoading] = useState(false)
   const [timer, setTimer] = useState(30)
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
@@ -72,7 +74,7 @@ export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, name }: Otp
     setIsLoading(true)
 
     try {
-      const response = await authService.verifyCustomerOtp(phone, otpValue, name)
+      const response = await authService.verifyCustomerOtp(phone, otpValue, initialName ? initialName : name)
 
       // Check if token exists (LoginResponse)
       if (response.data.token) {
@@ -216,6 +218,14 @@ export function OtpModal({ isOpen, onClose, onSuccess, initialPhone, name }: Otp
                         autoFocus
                       />
                     </div>
+                    {/* Name Input (optional) */}
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter your name (optional)"
+                      className="w-full mt-2 pl-4 pr-4 py-3 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent"
+                    />
                     <button
                       onClick={handlePhoneSubmit}
                       disabled={phone.length !== 10 || isLoading}

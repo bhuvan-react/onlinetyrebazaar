@@ -16,19 +16,33 @@ export default function HomePage() {
   const [showOtpModal, setShowOtpModal] = useState(false)
   const [mode, setMode] = useState<"buy" | "sell">("buy")
 
+  const search = useAppSelector((state) => state.search)
+
   const handleSearch = (currentMode?: "buy" | "sell") => {
     const searchMode = currentMode || mode
     if (searchMode === "sell") {
       router.push("/sell-tyres")
     } else if (isAuthenticated) {
-      router.push("/search")
+      const params = new URLSearchParams()
+      if (search.make) params.append("make", search.make)
+      if (search.model) params.append("model", search.model)
+      if (search.variant) params.append("variant", search.variant)
+      if (search.tyreSize) params.append("size", search.tyreSize)
+      if (search.pincode) params.append("pincode", search.pincode)
+      router.push(`/search?${params.toString()}`)
     } else {
       setShowOtpModal(true)
     }
   }
 
   const handleOtpSuccess = () => {
-    router.push("/search")
+    const params = new URLSearchParams()
+    if (search.make) params.append("make", search.make)
+    if (search.model) params.append("model", search.model)
+    if (search.variant) params.append("variant", search.variant)
+    if (search.tyreSize) params.append("size", search.tyreSize)
+    if (search.pincode) params.append("pincode", search.pincode)
+    router.push(`/search?${params.toString()}`)
   }
 
   const features = [

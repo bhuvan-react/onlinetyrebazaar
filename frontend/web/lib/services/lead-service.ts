@@ -45,8 +45,14 @@ export const leadService = {
         return apiClient.post<Lead>(API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE, data)
     },
 
-    selectTyreForLead: async (leadId: string, tyreId: string) => {
-        return apiClient.put<Lead>(`${API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE}/${leadId}/tyre/${tyreId}`)
+    selectTyreForLead: async (leadId: string, tyreId: string, tyreType: string = "NEW") => {
+        return apiClient.put<Lead>(`${API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE}/${leadId}/tyre/${tyreId}?tyreType=${tyreType.toUpperCase()}`)
+    },
+
+    // Eagerly update just the tyreType when the customer picks New/Used on the tyre card
+    // Called as soon as the quote page loads — before "Confirm Lead" is clicked
+    patchTyreType: async (leadId: string, tyreType: string) => {
+        return apiClient.put<Lead>(`${API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.CREATE}/${leadId}/type?tyreType=${tyreType.toUpperCase()}`)
     },
 
     // Backend returns Lead[] (bare array, not wrapped in { leads: [...] })

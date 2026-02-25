@@ -270,7 +270,7 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
     try {
       const payload = {
         vehicleType: search.vehicleType || "4W", // Ensure not null
-        tyreType: "NEW", // Enforce NEW for buy flow
+        tyreType: "NEW", // Placeholder — will be overridden by selectTyreForLead when user picks New/Used on the tyre card
         tyreBrand: data.preferences.includes("Genuine brand only") ? "OEM/Premium" : "Any",
         vehicleModel: search.make && search.model ? `${search.make} ${search.model} ${search.variant || ''}`.trim() : "Unknown Model",
         locationArea: search.city || search.state || "Unknown",
@@ -444,126 +444,17 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
             </h2>
 
             {mode === "sell" ? (
-              <div className="max-w-md mx-auto">
-                <AnimatePresence mode="wait">
-                  {sellStep === "phone" ? (
-                    <motion.div
-                      key="sell-phone"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                    >
-                      <div className="text-center mb-6">
-                        <div className="bg-teal-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Tag className="w-8 h-8 text-[#0D9488]" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to sell your tyres?</h3>
-                        <p className="text-gray-500">Enter your mobile number to get started</p>
-                      </div>
-
-                      <div className="space-y-4 mb-6">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Enter your full name"
-                            className="w-full px-4 py-4 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all text-lg"
-                          />
-                        </div>
-
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B7280]">+91</span>
-                          <input
-                            type="tel"
-                            value={sellMobile}
-                            onChange={(e) => setSellMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                            placeholder="Enter 10-digit number"
-                            className="w-full pl-12 pr-4 py-4 border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all text-lg"
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleSellPhoneSubmit}
-                        disabled={sellMobile.length !== 10 || name.trim().length < 2 || isSellLoading}
-                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${sellMobile.length === 10 && name.trim().length >= 2 && !isSellLoading
-                          ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white hover:opacity-90 shadow-lg shadow-teal-500/30"
-                          : "bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
-                          }`}
-                      >
-                        {isSellLoading ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <>
-                            Get OTP <ArrowRight className="w-5 h-5" />
-                          </>
-                        )}
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="sell-otp"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                    >
-                      <div className="text-center mb-6">
-                        <div className="bg-teal-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Phone className="w-8 h-8 text-[#0D9488]" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Verify Mobile Number</h3>
-                        <p className="text-gray-500">
-                          Enter OTP sent to <span className="font-medium text-gray-900">+91 {sellMobile}</span>
-                        </p>
-                        <button
-                          onClick={() => setSellStep("phone")}
-                          className="text-sm text-[#0D9488] hover:underline mt-1"
-                        >
-                          Change Number
-                        </button>
-                      </div>
-
-                      <div className="flex justify-center gap-2 mb-6">
-                        {sellOtp.map((digit, index) => (
-                          <input
-                            key={index}
-                            id={`sell-otp-${index}`}
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            value={digit}
-                            onChange={(e) => handleSellOtpChange(index, e.target.value)}
-                            onKeyDown={(e) => handleSellOtpKeyDown(index, e)}
-                            className="w-12 h-12 text-center text-xl font-semibold border border-[#D1D5DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent transition-all"
-                          />
-                        ))}
-                      </div>
-
-                      <div className="text-center mb-6">
-                        <button
-                          onClick={handleSellResendOtp}
-                          disabled={sellTimer > 0 || isSellLoading}
-                          className={`text-sm font-medium ${sellTimer > 0 ? "text-gray-400" : "text-[#0D9488] hover:underline"}`}
-                        >
-                          {sellTimer > 0 ? `Resend OTP in ${sellTimer}s` : "Resend OTP"}
-                        </button>
-                      </div>
-
-                      {/* We can hide this verification button if we want auto-submit only, but good to have as backup */}
-                      {/* <button
-                        onClick={handleSellOtpSubmit}
-                        disabled={sellOtp.some(d => d === "") || isSellLoading}
-                         className={`w-full py-4 rounded-xl font-bold transition-all ${!sellOtp.some(d => d === "") && !isSellLoading
-                            ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white hover:opacity-90 shadow-lg shadow-teal-500/30"
-                            : "bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
-                          }`}
-                      >
-                         {isSellLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Verify & Continue"}
-                      </button> */}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <div className="max-w-md mx-auto text-center py-12">
+                <div className="bg-teal-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Tag className="w-10 h-10 text-[#0D9488]" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Selling Tyres?</h3>
+                <p className="text-gray-500 text-lg mb-8 leading-relaxed">
+                  We're building an amazing experience for you to sell your old tyres at the best prices. This feature is coming very soon!
+                </p>
+                <div className="inline-block px-6 py-2 bg-gray-100 rounded-full text-gray-600 font-medium text-sm">
+                  🚧 Work in Progress 🚧
+                </div>
               </div>
             ) : (
               <>
@@ -953,7 +844,7 @@ export function VehicleSelector({ onSearch }: VehicleSelectorProps) {
         onClose={() => setShowOtpModal(false)}
         onSuccess={handleOtpSuccess}
         initialPhone={mobileNumber}
-        name={name}
+        initialName={name}
       />
     </div >
   )

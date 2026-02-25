@@ -1,38 +1,37 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Phone, MapPin, Calendar, ArrowRight } from 'lucide-react-native';
+import { MapPin, Calendar, ArrowRight } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 
 interface LeadCardProps {
     name: string;
     vehicle: string;
     tyreSize?: string;
+    tyreType?: string;
     location: string;
     date: string;
     status: 'New' | 'Follow-up' | 'Converted';
     onPress: () => void;
 }
 
-export default function LeadCard({ name, vehicle, tyreSize, location, date, status, onPress }: LeadCardProps) {
-    const getStatusColor = () => {
-        switch (status) {
-            case 'New': return COLORS.teal.main;
-            case 'Follow-up': return '#F59E0B'; // Amber
-            case 'Converted': return '#10B981'; // Emerald
-            default: return COLORS.gray[500];
-        }
-    };
+export default function LeadCard({ name, vehicle, tyreSize, tyreType, location, date, status, onPress }: LeadCardProps) {
+    // Derive tyre type display — defaults to New if no type set
+    const isNew = !tyreType || tyreType.toUpperCase() === 'NEW';
+    const tyreTypeColor = isNew ? COLORS.teal.main : '#9333EA';
+    const tyreTypeLabel = isNew ? 'New' : 'Used';
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress}>
             <View style={styles.header}>
-                <View>
+                {/* Left: Name, vehicle, tyre size */}
+                <View style={styles.headerLeft}>
                     <Text style={styles.name}>{name}</Text>
                     <Text style={styles.vehicle}>{vehicle}</Text>
                     {tyreSize && <Text style={styles.tyreSize}>{tyreSize}</Text>}
                 </View>
-                <View style={[styles.badge, { backgroundColor: getStatusColor() }]}>
-                    <Text style={styles.badgeText}>{status}</Text>
+                {/* Right: New / Used badge replacing VERIFIED */}
+                <View style={[styles.typeBadge, { backgroundColor: tyreTypeColor }]}>
+                    <Text style={styles.badgeText}>{tyreTypeLabel}</Text>
                 </View>
             </View>
 
@@ -48,7 +47,11 @@ export default function LeadCard({ name, vehicle, tyreSize, location, date, stat
             </View>
 
             <View style={styles.footer}>
-                <TouchableOpacity style={[styles.viewButton, { flex: 1, justifyContent: 'center' }]} onPress={onPress}>
+                {/* View Details button — Teal for New, Purple for Used */}
+                <TouchableOpacity
+                    style={[styles.viewButton, { backgroundColor: tyreTypeColor }]}
+                    onPress={onPress}
+                >
                     <Text style={styles.viewText}>View Details</Text>
                     <ArrowRight size={16} color={COLORS.white} />
                 </TouchableOpacity>
@@ -79,6 +82,10 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         marginBottom: 12,
     },
+    headerLeft: {
+        flex: 1,
+        marginRight: 8,
+    },
     name: {
         fontSize: 16,
         fontWeight: '700',
@@ -95,10 +102,11 @@ const styles = StyleSheet.create({
         color: COLORS.gray[600],
         marginTop: 2,
     },
-    badge: {
-        paddingHorizontal: 8,
+    typeBadge: {
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
+        alignSelf: 'flex-start',
     },
     badgeText: {
         color: COLORS.white,
@@ -144,9 +152,10 @@ const styles = StyleSheet.create({
     viewButton: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 6,
-        backgroundColor: COLORS.teal.main,
-        paddingVertical: 8,
+        flex: 1,
+        paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 8,
     },

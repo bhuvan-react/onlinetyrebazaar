@@ -85,18 +85,25 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.leadsList}>
-                {data?.recentLeads.map((lead: any) => (
-                    <LeadCard
-                        key={lead.id}
-                        name={lead.customerName}
-                        vehicle={lead.vehicle}
-                        tyreSize={lead.tyreSize}
-                        location={lead.location}
-                        date={lead.timestamp}
-                        status={lead.status === 'NEW' ? 'New' : lead.status === 'FOLLOW_UP' ? 'Follow-up' : lead.status === 'CONVERTED' ? 'Converted' : lead.status}
-                        onPress={() => handleLeadPress(lead.id)}
-                    />
-                ))}
+                {data?.recentLeads && data.recentLeads.length > 0 ? (
+                    data.recentLeads.map((lead: any) => (
+                        <LeadCard
+                            key={lead.id}
+                            name={lead.customerName}
+                            vehicle={lead.vehicle}
+                            tyreSize={lead.tyreSize}
+                            tyreType={lead.tyreType}
+                            location={lead.location}
+                            date={lead.timestamp}
+                            status={lead.status === 'NEW' ? 'New' : lead.status === 'FOLLOW_UP' ? 'Follow-up' : lead.status === 'CONVERTED' ? 'Converted' : 'New'}
+                            onPress={() => handleLeadPress(lead.id)}
+                        />
+                    ))
+                ) : (
+                    <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                        <Text style={{ color: '#9CA3AF', fontSize: 14 }}>No leads at the moment. Check back soon!</Text>
+                    </View>
+                )}
             </View>
         </ScrollView>
     );

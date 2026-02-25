@@ -1,8 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { X, Star } from "lucide-react"
-import { brands, priceRanges } from "@/lib/tyre-data"
+import { filterService, type FilterConfig } from "@/lib/services/filter-service"
 
 interface FiltersSidebarProps {
   tyreType: "new" | "used" | "all"
@@ -37,11 +38,52 @@ export function FiltersSidebar({
   selectedTyreSizes = [],
   setSelectedTyreSizes,
 }: FiltersSidebarProps) {
+  const [brands, setBrands] = useState<string[]>([])
+  const [priceRanges, setPriceRanges] = useState<FilterConfig[]>([])
+  const [ratings, setRatings] = useState<FilterConfig[]>([])
+
+  const [showAllSizes, setShowAllSizes] = useState(false)
+  const [showAllBrands, setShowAllBrands] = useState(false)
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [fetchedBrands, fetchedPriceRanges, fetchedRatings] = await Promise.all([
+          filterService.getBrands(),
+          filterService.getPriceRanges(),
+          filterService.getRatings(),
+        ])
+        setBrands(fetchedBrands)
+        setPriceRanges(fetchedPriceRanges)
+        setRatings(fetchedRatings)
+      } catch (error) {
+        console.error("Failed to load filters:", error)
+      }
+    }
+    fetchFilters()
+  }, [])
+
+  const isBrandChecked = (brand: string) => {
+    if (selectedBrands.length === 0) return brandCounts[brand] > 0
+    return selectedBrands.includes(brand)
+  }
+
   const handleBrandToggle = (brand: string) => {
-    if (selectedBrands.includes(brand)) {
-      setSelectedBrands(selectedBrands.filter((b) => b !== brand))
+    if (selectedBrands.length === 0) {
+      if (brandCounts[brand] > 0) {
+        // Unchecking an implicitly checked brand
+        const others = brands.filter((b) => b !== brand && brandCounts[b] > 0)
+        setSelectedBrands(others.length === 0 ? ["__NONE__"] : others)
+      } else {
+        setSelectedBrands([brand])
+      }
     } else {
-      setSelectedBrands([...selectedBrands, brand])
+      if (selectedBrands.includes(brand)) {
+        const next = selectedBrands.filter((b) => b !== brand)
+        setSelectedBrands(next.length === 0 ? ["__NONE__"] : next)
+      } else {
+        setSelectedBrands([...selectedBrands.filter((b) => b !== "__NONE__"), brand])
+      }
     }
   }
 
@@ -63,6 +105,36 @@ export function FiltersSidebar({
     if (setSelectedTyreSizes) setSelectedTyreSizes([])
   }
 
+  // Derive display sizes
+  const displaySizes = [...availableSizes].sort((a, b) => {
+    const aSelected = selectedTyreSizes.includes(a)
+    const bSelected = selectedTyreSizes.includes(b)
+    if (aSelected && !bSelected) return -1
+    if (!aSelected && bSelected) return 1
+    return a.localeCompare(b)
+  })
+  
+  const visibleSizes = showAllSizes ? displaySizes : displaySizes.slice(0, 5)
+
+  // Derive display brands
+  const displayBrands = [...brands].sort((a, b) => {
+    const aChecked = isBrandChecked(a)
+    const bChecked = isBrandChecked(b)
+    if (aChecked && !bChecked) return -1
+    if (!aChecked && bChecked) return 1
+    
+    // Sort by count descending
+    const countA = brandCounts[a] || 0
+    const countB = brandCounts[b] || 0
+    if (countA > countB) return -1
+    if (countA < countB) return 1
+    
+    // Fallback alphanumeric
+    return a.localeCompare(b)
+  })
+
+  const visibleBrands = showAllBrands ? displayBrands : displayBrands.slice(0, 5)
+
   const content = (
     <div className="space-y-6">
       {/* Header */}
@@ -83,7 +155,7 @@ export function FiltersSidebar({
           <div>
             <h4 className="text-sm font-medium text-[#1F2937] mb-3">Tyre Size</h4>
             <div className="space-y-2">
-              {availableSizes.map((size) => (
+              {visibleSizes.map((size) => (
                 <label key={size} className="flex items-center gap-3 cursor-pointer group">
                   <div
                     className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedTyreSizes.includes(size)
@@ -114,6 +186,14 @@ export function FiltersSidebar({
                 </label>
               ))}
             </div>
+            {displaySizes.length > 5 && (
+              <button
+                onClick={() => setShowAllSizes(!showAllSizes)}
+                className="mt-3 text-[#0D9488] text-sm font-medium hover:underline"
+              >
+                {showAllSizes ? "Show Less" : `+${displaySizes.length - 5} More`}
+              </button>
+            )}
           </div>
           <div className="h-px bg-gray-100" />
         </>
@@ -142,43 +222,53 @@ export function FiltersSidebar({
         </div>
       </div> */}
 
-      {/* Brands */}
       <div>
         <h4 className="text-sm font-medium text-[#1F2937] mb-3">Brands</h4>
         <div className="space-y-2">
-          {brands.map((brand) => (
-            <label key={brand} className="flex items-center gap-3 cursor-pointer group">
-              <div
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedBrands.includes(brand)
-                  ? "bg-[#0D9488] border-[#0D9488]"
-                  : "border-[#D1D5DB] group-hover:border-[#0D9488]"
-                  }`}
-              >
-                {selectedBrands.includes(brand) && (
-                  <motion.svg
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-3 h-3 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </motion.svg>
-                )}
-              </div>
-              <input
-                type="checkbox"
-                checked={selectedBrands.includes(brand)}
-                onChange={() => handleBrandToggle(brand)}
-                className="sr-only"
-              />
-              <span className="text-[#1F2937] text-sm">
-                {brand} <span className="text-gray-400">({brandCounts[brand] || 0})</span>
-              </span>
-            </label>
-          ))}
+          {visibleBrands.map((brand) => {
+            const checked = isBrandChecked(brand)
+            return (
+              <label key={brand} className="flex items-center gap-3 cursor-pointer group">
+                <div
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${checked
+                    ? "bg-[#0D9488] border-[#0D9488]"
+                    : "border-[#D1D5DB] group-hover:border-[#0D9488]"
+                    }`}
+                >
+                  {checked && (
+                    <motion.svg
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </motion.svg>
+                  )}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => handleBrandToggle(brand)}
+                  className="sr-only"
+                />
+                <span className="text-[#1F2937] text-sm">
+                  {brand} <span className="text-gray-400">({brandCounts[brand] || 0})</span>
+                </span>
+              </label>
+            )
+          })}
         </div>
+        {displayBrands.length > 5 && (
+          <button
+            onClick={() => setShowAllBrands(!showAllBrands)}
+            className="mt-3 text-[#0D9488] text-sm font-medium hover:underline"
+          >
+            {showAllBrands ? "Show Less" : `+${displayBrands.length - 5} More`}
+          </button>
+        )}
       </div>
 
       <div className="h-px bg-gray-100" />
@@ -187,32 +277,36 @@ export function FiltersSidebar({
       <div>
         <h4 className="text-sm font-medium text-[#1F2937] mb-3">Price Range</h4>
         <div className="space-y-2">
-          {priceRanges.map((range) => (
-            <label key={range.label} className="flex items-center gap-3 cursor-pointer group">
-              <div
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedPriceRange?.min === range.min && selectedPriceRange?.max === range.max
-                  ? "border-[#0D9488]"
-                  : "border-[#D1D5DB] group-hover:border-[#0D9488]"
-                  }`}
-              >
-                {selectedPriceRange?.min === range.min && selectedPriceRange?.max === range.max && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-3 h-3 bg-[#0D9488] rounded-full"
-                  />
-                )}
-              </div>
-              <input
-                type="radio"
-                name="priceRange"
-                checked={selectedPriceRange?.min === range.min && selectedPriceRange?.max === range.max}
-                onChange={() => setSelectedPriceRange({ min: range.min, max: range.max })}
-                className="sr-only"
-              />
-              <span className="text-[#1F2937] text-sm">{range.label}</span>
-            </label>
-          ))}
+          {priceRanges.map((range) => {
+            const min = Number(range.minValue)
+            const max = range.maxValue ? Number(range.maxValue) : Number.POSITIVE_INFINITY
+            return (
+              <label key={range.id} className="flex items-center gap-3 cursor-pointer group">
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedPriceRange?.min === min && selectedPriceRange?.max === max
+                    ? "border-[#0D9488]"
+                    : "border-[#D1D5DB] group-hover:border-[#0D9488]"
+                    }`}
+                >
+                  {selectedPriceRange?.min === min && selectedPriceRange?.max === max && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-3 h-3 bg-[#0D9488] rounded-full"
+                    />
+                  )}
+                </div>
+                <input
+                  type="radio"
+                  name="priceRange"
+                  checked={selectedPriceRange?.min === min && selectedPriceRange?.max === max}
+                  onChange={() => setSelectedPriceRange({ min, max })}
+                  className="sr-only"
+                />
+                <span className="text-[#1F2937] text-sm">{range.label}</span>
+              </label>
+            )
+          })}
         </div>
       </div>
 
@@ -222,23 +316,26 @@ export function FiltersSidebar({
       <div>
         <h4 className="text-sm font-medium text-[#1F2937] mb-3">Minimum Rating</h4>
         <div className="flex gap-2">
-          {[0, 3, 3.5, 4, 4.5].map((rating) => (
-            <button
-              key={rating}
-              onClick={() => setMinRating(rating)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-all ${minRating === rating ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white" : "bg-[#F9FAFB] text-[#6B7280] hover:bg-[#F0FDFA]"
-                }`}
-            >
-              {rating === 0 ? (
-                "All"
-              ) : (
-                <>
-                  {rating}
-                  <Star className="w-3 h-3 fill-current" />
-                </>
-              )}
-            </button>
-          ))}
+          {ratings.map((ratingOption) => {
+            const ratingValue = Number(ratingOption.minValue)
+            return (
+              <button
+                key={ratingOption.id}
+                onClick={() => setMinRating(ratingValue)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-all ${minRating === ratingValue ? "bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white" : "bg-[#F9FAFB] text-[#6B7280] hover:bg-[#F0FDFA]"
+                  }`}
+              >
+                {ratingValue === 0 ? (
+                  ratingOption.label
+                ) : (
+                  <>
+                    {ratingValue}
+                    <Star className="w-3 h-3 fill-current" />
+                  </>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 

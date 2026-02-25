@@ -112,12 +112,12 @@ export function Header() {
                 >
                   Login
                 </Link>
-                <Link
+                {/* <Link
                   href="/register"
                   className="px-4 py-2 bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
                 >
                   Register
-                </Link>
+                </Link> */}
               </>
             )}
           </div>
@@ -165,9 +165,6 @@ export function Header() {
                   <>
                     <Link href="/login" className="block px-4 py-2 text-[#0D9488] hover:bg-[#F0FDFA] rounded-lg">
                       Login
-                    </Link>
-                    <Link href="/register" className="block px-4 py-2 bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white rounded-lg text-center">
-                      Register
                     </Link>
                   </>
                 )}

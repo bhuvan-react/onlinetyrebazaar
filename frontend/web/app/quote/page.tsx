@@ -63,6 +63,17 @@ function QuoteContent() {
         })
     }, [tyreId])
 
+    // ── Eagerly update tyreType the moment the customer lands on the quote page ──
+    // This fires as soon as "Get this Lead" is clicked (since it navigates here).
+    // The dealer sees the correct New/Used badge immediately — no need to wait for Confirm.
+    useEffect(() => {
+        if (!searchState.leadId || !isAuthenticated) return
+        const tyreTypeForApi = variant === "new" ? "NEW" : "USED"
+        leadService.patchTyreType(searchState.leadId, tyreTypeForApi).catch(() => {
+            // Silent fail — this is a best-effort eager update; the confirm step will also update it
+        })
+    }, [searchState.leadId, variant, isAuthenticated])
+
     const buildLeadRequest = useCallback((tyre: Tyre) => {
         const pincode = searchState.pincode || localPincode || "000000"
         const city = searchState.city || localCity || "Unknown"
@@ -88,8 +99,9 @@ function QuoteContent() {
         try {
             let response;
             if (searchState.leadId) {
-                // UPDATE existing lead
-                response = await leadService.selectTyreForLead(searchState.leadId, tyre.id)
+                // UPDATE existing lead — pass tyreType so it's persisted for the dealer to see
+                const tyreTypeForApi = variant === "new" ? "NEW" : "USED"
+                response = await leadService.selectTyreForLead(searchState.leadId, tyre.id, tyreTypeForApi)
             } else {
                 // CREATE new lead (fallback)
                 const request = buildLeadRequest(tyre)

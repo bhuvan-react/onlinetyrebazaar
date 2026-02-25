@@ -12,12 +12,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/search")
+      router.replace("/")
     }
   }, [isAuthenticated, router])
 
   const handleSuccess = () => {
-    router.replace("/search")
+    router.replace("/")
   }
 
   const handleClose = () => {

@@ -30,5 +30,11 @@ export const API_CONFIG = {
             GET_ALL: "/tyres",
             GET_BY_ID: (id: string) => `/tyres/${id}`,
         },
+        FILTERS: {
+            PRICE_RANGES: "/filters/price-ranges",
+            RATINGS: "/filters/ratings",
+            BRANDS: "/filters/brands",
+            SIZES: "/filters/sizes",
+        },
     },
 }

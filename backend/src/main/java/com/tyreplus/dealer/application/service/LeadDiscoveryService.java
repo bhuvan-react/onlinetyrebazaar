@@ -60,7 +60,7 @@ public class LeadDiscoveryService {
     }
 
     @Transactional
-    public LeadDetailsResponse updateTyreSelection(UUID leadId, UUID tyreId, String customerMobile) {
+    public LeadDetailsResponse updateTyreSelection(UUID leadId, UUID tyreId, String tyreType, String customerMobile) {
         Customer customer = customerRepository.findByMobile(customerMobile)
                 .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
 
@@ -73,6 +73,33 @@ public class LeadDiscoveryService {
         }
 
         lead.setTyreId(tyreId);
+        // Persist the tyreType (NEW/USED) so dealers see the correct badge
+        if (tyreType != null && !tyreType.isBlank()) {
+            lead.setTyreType(tyreType.toUpperCase());
+        }
+        Lead savedLead = leadRepository.save(lead);
+        return mapToResponse(savedLead);
+    }
+
+    /**
+     * Eagerly update ONLY tyreType (NEW/USED) — called when customer picks a
+     * variant
+     * on the tyre card, before they have confirmed on the quote page.
+     * This ensures dealers see the correct badge immediately.
+     */
+    @Transactional
+    public LeadDetailsResponse updateTyreType(UUID leadId, String tyreType, String customerMobile) {
+        Customer customer = customerRepository.findByMobile(customerMobile)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+
+        if (!lead.getCustomerId().equals(customer.getId())) {
+            throw new IllegalStateException("You do not have permission to modify this lead.");
+        }
+
+        lead.setTyreType(tyreType.toUpperCase());
         Lead savedLead = leadRepository.save(lead);
         return mapToResponse(savedLead);
     }

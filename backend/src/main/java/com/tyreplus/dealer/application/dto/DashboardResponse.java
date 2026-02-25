@@ -20,6 +20,7 @@ public record DashboardResponse(
                         String customerName,
                         String vehicle,
                         String tyreSize,
+                        String tyreType,
                         String location,
                         String status,
                         String timestamp) {

@@ -44,6 +44,11 @@ public class TyreRepositoryAdapter implements TyreRepository {
     }
 
     @Override
+    public List<String> getAllSizes() {
+        return repository.findAllSizes();
+    }
+
+    @Override
     public List<String> getPatternsByBrandAndSize(String brand, String size) {
         return repository.findDistinctPatternsByBrandAndSize(brand, size);
     }

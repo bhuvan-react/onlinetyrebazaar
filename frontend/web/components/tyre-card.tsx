@@ -210,9 +210,8 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
         </div>
 
         <div className="mt-auto">
-          {/* Price Chips — color is driven purely by selectedVariant, no dependency on isSelected */}
+          {/* Price Chips — dual toggle for new/used */}
           <div className="flex items-center gap-2 mb-3">
-            {tyre.newPrice && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -224,9 +223,8 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
                     : "bg-white text-gray-600 border-gray-200 hover:border-[#0D9488]"
                 }`}
               >
-                New<br />₹{(tyre.newPrice || tyre.price).toLocaleString()}
+                New<br />₹{(tyre.newPrice || tyre.price || 0).toLocaleString()}
               </button>
-            )}
 
             <button
               onClick={(e) => {
