@@ -1,157 +1,37 @@
 "use client"
 
 import { Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-import { useEffect, useState, useCallback } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import Image from "next/image"
-import { CheckCircle2, ClipboardList, Coins, SearchCheck, CalendarCheck, Loader2 } from "lucide-react"
+import { CheckCircle2, ClipboardList, Coins, SearchCheck, CalendarCheck } from "lucide-react"
 import { tyreService } from "@/lib/services/tyre-service"
-import { leadService } from "@/lib/services/lead-service"
 import type { Tyre } from "@/lib/tyre-data"
-import { OtpModal } from "@/components/otp-modal"
-import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { initializeAuth, initializeSearch } from "@/lib/store"
-
-function mapVehicleType(v: string | null): string {
-    if (v === "2W") return "TWO_WHEELER"
-    if (v === "3W") return "THREE_WHEELER"
-    return "FOUR_WHEELER"
-}
+import { useAppDispatch } from "@/lib/hooks"
+import { initializeAuth, resetSearch } from "@/lib/store"
 
 function QuoteContent() {
     const searchParams = useSearchParams()
+    const router = useRouter()
+    const dispatch = useAppDispatch()
     const tyreId = searchParams.get("tyreId")
     const variant = searchParams.get("variant") || "new"
     const [tyre, setTyre] = useState<Tyre | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Auth & search state
-    const dispatch = useAppDispatch()
-    const { isAuthenticated, isLoading: authLoading } = useAppSelector((state) => state.auth)
-    const searchState = useAppSelector((state) => state.search)
-
-    // Lead submission state
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [leadSubmitted, setLeadSubmitted] = useState(false)
-    const [submitError, setSubmitError] = useState<string | null>(null)
-    const [showOtpModal, setShowOtpModal] = useState(false)
-
-    // Fallback fields if Redux state is missing
-    const [localPincode, setLocalPincode] = useState("")
-    const [localCity, setLocalCity] = useState("")
-    const [localVehicleType, setLocalVehicleType] = useState<"2W" | "3W" | "4W">("4W")
-    const [showFallbackForm, setShowFallbackForm] = useState(false)
-
     useEffect(() => {
         dispatch(initializeAuth())
-        dispatch(initializeSearch())
     }, [dispatch])
 
     useEffect(() => {
-        if (!tyreId) {
-            setLoading(false)
-            return
-        }
-
+        if (!tyreId) { setLoading(false); return }
         tyreService.getTyreById(tyreId).then((response) => {
-            if (response.data) {
-                setTyre(response.data)
-            }
+            if (response.data) setTyre(response.data)
             setLoading(false)
-        }).catch(() => {
-            setLoading(false)
-        })
+        }).catch(() => setLoading(false))
     }, [tyreId])
 
-    // ── Eagerly update tyreType the moment the customer lands on the quote page ──
-    // This fires as soon as "Get this Lead" is clicked (since it navigates here).
-    // The dealer sees the correct New/Used badge immediately — no need to wait for Confirm.
-    useEffect(() => {
-        if (!searchState.leadId || !isAuthenticated) return
-        const tyreTypeForApi = variant === "new" ? "NEW" : "USED"
-        leadService.patchTyreType(searchState.leadId, tyreTypeForApi).catch(() => {
-            // Silent fail — this is a best-effort eager update; the confirm step will also update it
-        })
-    }, [searchState.leadId, variant, isAuthenticated])
-
-    const buildLeadRequest = useCallback((tyre: Tyre) => {
-        const pincode = searchState.pincode || localPincode || "000000"
-        const city = searchState.city || localCity || "Unknown"
-        const vType = searchState.vehicleType || localVehicleType
-        const make = searchState.make || ""
-        const model = searchState.model || ""
-        const vehicleModel = [make, model].filter(Boolean).join(" ") || tyre.model || tyre.pattern || tyre.brand
-
-        return {
-            vehicleType: mapVehicleType(vType),
-            tyreType: variant === "new" ? "NEW" : "USED",
-            tyreBrand: tyre.brand,
-            vehicleModel,
-            locationArea: city,
-            locationPincode: pincode.padEnd(6, "0").slice(0, 6),
-            tyreId: tyreId,
-        }
-    }, [searchState, localPincode, localCity, localVehicleType, variant])
-
-    const submitLead = useCallback(async (tyre: Tyre) => {
-        setIsSubmitting(true)
-        setSubmitError(null)
-        try {
-            let response;
-            if (searchState.leadId) {
-                // UPDATE existing lead — pass tyreType so it's persisted for the dealer to see
-                const tyreTypeForApi = variant === "new" ? "NEW" : "USED"
-                response = await leadService.selectTyreForLead(searchState.leadId, tyre.id, tyreTypeForApi)
-            } else {
-                // CREATE new lead (fallback)
-                const request = buildLeadRequest(tyre)
-                response = await leadService.createLead(request)
-            }
-
-            if (response.data || response.status === 200) {
-                setLeadSubmitted(true)
-            } else {
-                setSubmitError("Failed to submit lead. Please try again.")
-            }
-        } catch {
-            setSubmitError("Failed to submit lead. Please try again.")
-        } finally {
-            setIsSubmitting(false)
-        }
-    }, [buildLeadRequest, searchState.leadId])
-
-    const handleConfirmLead = () => {
-        if (!tyre) return
-        const needsFallback = !searchState.pincode && !localPincode
-        if (needsFallback) {
-            setShowFallbackForm(true)
-            return
-        }
-        if (!isAuthenticated) {
-            setShowOtpModal(true)
-            return
-        }
-        submitLead(tyre)
-    }
-
-    const handleOtpSuccess = useCallback(() => {
-        setShowOtpModal(false)
-        if (tyre) {
-            submitLead(tyre)
-        }
-    }, [tyre, submitLead])
-
-    const handleFallbackSubmit = () => {
-        if (localPincode.length !== 6) return
-        setShowFallbackForm(false)
-        if (!isAuthenticated) {
-            setShowOtpModal(true)
-            return
-        }
-        if (tyre) submitLead(tyre)
-    }
-
-    if (loading || authLoading) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FFF1F2]">
                 <div className="animate-pulse flex flex-col items-center gap-4">
@@ -174,15 +54,11 @@ function QuoteContent() {
     }
 
     const isNew = variant === "new"
-    const displayPrice = isNew
-        ? (tyre.newPrice || tyre.price)
-        : (tyre.usedPrice || tyre.price)
-
+    const displayPrice = isNew ? (tyre.newPrice || tyre.price) : (tyre.usedPrice || tyre.price)
     const originalPrice = isNew ? tyre.originalPrice : tyre.newPrice
     const discount = originalPrice && displayPrice
         ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
         : 0
-
     const accentColor = isNew ? "#0D9488" : "#9333EA"
 
     return (
@@ -193,28 +69,19 @@ function QuoteContent() {
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-[#1F2937] flex items-center gap-2">
                         <ClipboardList className="w-6 h-6 text-[#8B5CF6]" />
-                        REQUEST QUOTE
+                        ENQUIRY SUBMITTED!
                     </h1>
-                    <p className="text-sm text-gray-600 ml-8">Get Best Prices from Verified Dealers</p>
+                    <p className="text-sm text-gray-600 ml-8">Verified dealers will contact you with the best quotes.</p>
                 </div>
 
-                {/* Lead submitted success banner */}
-                {leadSubmitted ? (
-                    <div className="bg-[#D1FAE5] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
-                        <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-[#065F46] font-bold">Lead Submitted Successfully!</p>
-                            <p className="text-[#065F46] text-sm mt-0.5">Verified dealers will contact you shortly with the best quotes.</p>
-                        </div>
+                {/* Success Banner */}
+                <div className="bg-[#D1FAE5] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
+                    <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-[#065F46] font-bold">Lead Created Successfully!</p>
+                        <p className="text-[#065F46] text-sm mt-0.5">Dealers in your area are reviewing your request. You'll hear back in 15-30 minutes.</p>
                     </div>
-                ) : (
-                    <div className="bg-[#A7F3D0] border border-[#34D399] rounded-xl p-4 mb-6 flex items-start gap-3 shadow-sm">
-                        <CheckCircle2 className="w-6 h-6 text-[#059669] flex-shrink-0 mt-0.5" />
-                        <p className="text-[#065F46] font-medium">
-                            <span className="font-bold">Interest Submitted!</span> Review details below and confirm to get quotes from verified dealers.
-                        </p>
-                    </div>
-                )}
+                </div>
 
                 {/* Product Card */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm mb-6 flex flex-col sm:flex-row items-center gap-6">
@@ -228,7 +95,6 @@ function QuoteContent() {
                         />
                     </div>
                     <div className="flex-1 text-center sm:text-left">
-                        {/* Variant badge */}
                         <span
                             className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold text-white mb-2"
                             style={{ backgroundColor: accentColor }}
@@ -266,31 +132,11 @@ function QuoteContent() {
 
                     <div className="space-y-6">
                         {[
-                            {
-                                icon: <SearchCheck className="w-4 h-4 text-gray-500" />,
-                                title: "Dealers Review (15-30 mins)",
-                                desc: "Verified dealers in your area will review your request",
-                            },
-                            {
-                                icon: <Coins className="w-4 h-4 text-gray-500" />,
-                                title: "Receive Quotes",
-                                desc: "Get competitive pricing from multiple dealers",
-                            },
-                            {
-                                icon: <CheckCircle2 className="w-4 h-4 text-[#059669]" />,
-                                title: "Compare & Choose",
-                                desc: "Select the best offer based on price and service",
-                            },
-                            {
-                                icon: <CalendarCheck className="w-4 h-4 text-gray-500" />,
-                                title: "Confirm Installation",
-                                desc: "Schedule your preferred date and time",
-                            },
-                            {
-                                icon: <CalendarCheck className="w-4 h-4 text-gray-500" />,
-                                title: "🚀 Get Installed!",
-                                desc: "Professional installation at your doorstep",
-                            },
+                            { icon: <SearchCheck className="w-4 h-4 text-gray-500" />, title: "Dealers Review (15-30 mins)", desc: "Verified dealers in your area will review your request" },
+                            { icon: <Coins className="w-4 h-4 text-gray-500" />, title: "Receive Quotes", desc: "Get competitive pricing from multiple dealers" },
+                            { icon: <CheckCircle2 className="w-4 h-4 text-[#059669]" />, title: "Compare & Choose", desc: "Select the best offer based on price and service" },
+                            { icon: <CalendarCheck className="w-4 h-4 text-gray-500" />, title: "Confirm Installation", desc: "Schedule your preferred date and time" },
+                            { icon: <CalendarCheck className="w-4 h-4 text-gray-500" />, title: "🚀 Get Installed!", desc: "Professional installation at your doorstep" },
                         ].map((step, i) => (
                             <div key={i} className="flex gap-4">
                                 <div
@@ -309,87 +155,28 @@ function QuoteContent() {
                         ))}
                     </div>
 
-                    {/* Fallback pincode form */}
-                    {showFallbackForm && !leadSubmitted && (
-                        <div className="mt-6 p-4 border border-gray-200 rounded-xl bg-[#F9FAFB]">
-                            <p className="text-sm font-semibold text-[#1F2937] mb-3">Enter your pincode to proceed</p>
-                            <div className="flex gap-2">
-                                <select
-                                    value={localVehicleType}
-                                    onChange={(e) => setLocalVehicleType(e.target.value as "2W" | "3W" | "4W")}
-                                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0D9488]"
-                                >
-                                    <option value="4W">4 Wheeler</option>
-                                    <option value="2W">2 Wheeler</option>
-                                    <option value="3W">3 Wheeler</option>
-                                </select>
-                                <input
-                                    type="tel"
-                                    value={localPincode}
-                                    onChange={(e) => setLocalPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                                    placeholder="6-digit pincode"
-                                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0D9488]"
-                                    maxLength={6}
-                                />
-                                <button
-                                    onClick={handleFallbackSubmit}
-                                    disabled={localPincode.length !== 6}
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                                    style={{ backgroundColor: accentColor }}
-                                >
-                                    Continue
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Error state */}
-                    {submitError && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                            {submitError}
-                        </div>
-                    )}
-
                     {/* Action buttons */}
                     <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 justify-center">
-                        <a
-                            href="/search"
+                        <button
+                            onClick={() => {
+                                dispatch(resetSearch())
+                                router.push('/search')
+                            }}
                             className="inline-block px-6 py-2.5 rounded-xl font-semibold text-sm border transition-all hover:opacity-80"
                             style={{ borderColor: accentColor, color: accentColor }}
                         >
                             ← Browse More Tyres
-                        </a>
-
-                        {/* {!leadSubmitted && (
-                            <button
-                                onClick={handleConfirmLead}
-                                disabled={isSubmitting}
-                                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90 disabled:opacity-60"
-                                style={{ backgroundColor: accentColor }}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        Confirm &amp; Submit Lead
-                                    </>
-                                )}
-                            </button>
-                        )} */}
+                        </button>
+                        <button
+                            onClick={() => router.push('/my-enquiries')}
+                            className="inline-block px-6 py-2.5 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90"
+                            style={{ backgroundColor: accentColor }}
+                        >
+                            View My Enquiries →
+                        </button>
                     </div>
                 </div>
             </main>
-
-            {/* OTP Modal */}
-            <OtpModal
-                isOpen={showOtpModal}
-                onClose={() => setShowOtpModal(false)}
-                onSuccess={handleOtpSuccess}
-            />
         </div>
     )
 }

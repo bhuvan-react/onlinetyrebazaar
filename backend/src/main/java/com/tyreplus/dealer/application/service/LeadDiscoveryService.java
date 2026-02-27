@@ -73,6 +73,15 @@ public class LeadDiscoveryService {
         }
 
         lead.setTyreId(tyreId);
+
+        // Fetch the selected tyre to keep the lead denormalized fields up to date
+        tyreRepository.findById(tyreId).ifPresent(tyre -> {
+            lead.setTyreBrand(tyre.getBrand());
+            if (tyre.getSize() != null && !tyre.getSize().isBlank()) {
+                lead.setTyreSize(tyre.getSize());
+            }
+        });
+
         // Persist the tyreType (NEW/USED) so dealers see the correct badge
         if (tyreType != null && !tyreType.isBlank()) {
             lead.setTyreType(tyreType.toUpperCase());

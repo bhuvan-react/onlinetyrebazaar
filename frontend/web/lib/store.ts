@@ -146,9 +146,9 @@ const searchSlice = createSlice({
     },
     initializeSearch: (state) => {
       if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("tyreplus_lead_id")
-        if (stored) {
-          state.leadId = stored
+        const storedId = localStorage.getItem("tyreplus_lead_id")
+        if (storedId) {
+          state.leadId = storedId
         }
       }
     },

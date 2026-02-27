@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
 import { logout } from "@/lib/store"
-import { Menu, X, ChevronDown, User, LogOut, Settings, ShoppingBag, Car } from "lucide-react"
+import { Menu, X, ChevronDown, User, LogOut, Settings, ShoppingBag, Car, ClipboardList } from "lucide-react"
 
 export function Header() {
   const router = useRouter()
@@ -84,10 +84,14 @@ export function Header() {
                           <Car className="w-4 h-4 text-[#6B7280]" />
                           My Vehicles
                         </Link>
-                        <Link href="/my-orders" className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
+                        <Link href="/my-enquiries" className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
+                          <ClipboardList className="w-4 h-4 text-[#6B7280]" />
+                          My Enquiries
+                        </Link>
+                        {/* <Link href="/my-orders" className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
                           <ShoppingBag className="w-4 h-4 text-[#6B7280]" />
                           My Orders
-                        </Link>
+                        </Link> */}
                         {/* <button className="w-full px-4 py-2 text-left text-sm text-[#1F2937] hover:bg-[#F9FAFB] flex items-center gap-3">
                           <Settings className="w-4 h-4 text-[#6B7280]" />
                           Settings
@@ -150,6 +154,9 @@ export function Header() {
                     </div>
                     <Link href="/my-vehicles" className="block px-4 py-2 text-[#1F2937] hover:bg-[#F9FAFB] rounded-lg">
                       My Vehicles
+                    </Link>
+                    <Link href="/my-enquiries" className="block px-4 py-2 text-[#1F2937] hover:bg-[#F9FAFB] rounded-lg">
+                      My Enquiries
                     </Link>
                     <Link href="/my-orders" className="block px-4 py-2 text-[#1F2937] hover:bg-[#F9FAFB] rounded-lg">
                       My Orders
