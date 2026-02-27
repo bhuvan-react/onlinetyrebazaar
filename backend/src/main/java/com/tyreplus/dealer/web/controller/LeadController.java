@@ -83,6 +83,23 @@ public class LeadController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Buy Lead", description = "Dealer pays credits to unlock a lead and move it to their Follow-up tab.")
+    @PostMapping("/{leadId}/buy")
+    public ResponseEntity<Void> buyLead(
+            @PathVariable UUID leadId,
+            @AuthenticationPrincipal DealerDetails dealer) {
+        purchaseService.buyLead(leadId, dealer.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Get Offers for Lead", description = "Returns all dealer offers for a lead (visible to authenticated customer or selected dealer).")
+    @GetMapping("/{leadId}/offers")
+    public ResponseEntity<java.util.List<OfferResponse>> getOffers(
+            @PathVariable UUID leadId,
+            @AuthenticationPrincipal DealerDetails dealer) {
+        return ResponseEntity.ok(offerService.getOffersForLead(leadId));
+    }
+
     @Operation(summary = "Mark Tyre Replaced", description = "Dealers use this to indicate the customer came and replaced tyres. Transitions lead to CONVERTED.")
     @PutMapping("/{leadId}/replace-tyre")
     public ResponseEntity<Void> replaceTyre(@PathVariable UUID leadId,

@@ -126,13 +126,14 @@ public class LeadRepositoryAdapter implements LeadRepository {
     @Override
     public Page<Lead> findLeadsWithFilters(LeadStatus status, UUID dealerId, Pageable pageable) {
         if (status == null) {
-            return jpaRepository.findAvailableLeads(pageable).map(mapper::toDomainEntity);
+            return jpaRepository.findAvailableLeadsForDealer(dealerId, pageable).map(mapper::toDomainEntity);
         }
-        return jpaRepository.findAvailableLeadsByStatus(status, pageable).map(mapper::toDomainEntity);
+        return jpaRepository.findAvailableLeadsByStatusForDealer(status, dealerId, pageable)
+                .map(mapper::toDomainEntity);
     }
 
     @Override
     public Page<Lead> findLeadsBySelectedDealer(UUID dealerId, Pageable pageable) {
-        return jpaRepository.findLeadsBySelectedDealerId(dealerId, pageable).map(mapper::toDomainEntity);
+        return jpaRepository.findPurchasedLeadsByDealerId(dealerId, pageable).map(mapper::toDomainEntity);
     }
 }

@@ -66,7 +66,7 @@ export default function RoadsideRegisterScreen({ navigation }: Props) {
             setOtpModalVisible(false);
             Alert.alert(
                 'Success',
-                'Registration successful! Welcome to TyrePlus Roadside Dealer network.',
+                'Registration successful! Welcome to Online Tyre Bazaar Roadside Dealer network.',
                 [{ text: 'OK', onPress: () => navigation.replace('MainTabs', { screen: 'Dashboard' }) }]
             );
         } catch (error) {
@@ -137,7 +137,7 @@ export default function RoadsideRegisterScreen({ navigation }: Props) {
                 <Text style={styles.benefitsTitle}>Benefits of Joining</Text>
                 <View style={styles.benefitItem}>
                     <Text style={styles.benefitIcon}>✓</Text>
-                    <Text style={styles.benefitText}>Get listed on TyrePlus platform</Text>
+                    <Text style={styles.benefitText}>Get listed on Online Tyre Bazaar platform</Text>
                 </View>
                 <View style={styles.benefitItem}>
                     <Text style={styles.benefitIcon}>✓</Text>

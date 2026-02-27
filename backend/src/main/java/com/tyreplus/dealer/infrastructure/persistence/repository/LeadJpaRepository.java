@@ -39,16 +39,21 @@ public interface LeadJpaRepository extends JpaRepository<LeadJpaEntity, UUID>, J
         @Query("SELECT l FROM LeadJpaEntity l WHERE l.id = :id")
         Optional<LeadJpaEntity> findByIdWithLock(@Param("id") UUID id);
 
-        // All available leads (no status filter)
-        @Query("SELECT l FROM LeadJpaEntity l WHERE l.selectedDealerId IS NULL")
-        Page<LeadJpaEntity> findAvailableLeads(Pageable pageable);
+        // All available leads — excludes leads this dealer already bought
+        @Query("SELECT l FROM LeadJpaEntity l WHERE NOT EXISTS " +
+                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId)")
+        Page<LeadJpaEntity> findAvailableLeadsForDealer(@Param("dealerId") UUID dealerId, Pageable pageable);
 
-        // Available leads filtered by status
-        @Query("SELECT l FROM LeadJpaEntity l WHERE l.status = :status AND l.selectedDealerId IS NULL")
-        Page<LeadJpaEntity> findAvailableLeadsByStatus(
+        // Available leads filtered by status — excludes leads this dealer already
+        // bought
+        @Query("SELECT l FROM LeadJpaEntity l WHERE l.status = :status AND NOT EXISTS " +
+                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId)")
+        Page<LeadJpaEntity> findAvailableLeadsByStatusForDealer(
                         @Param("status") LeadStatus status,
+                        @Param("dealerId") UUID dealerId,
                         Pageable pageable);
 
-        // Returns a paginated list of leads won by a particular dealer
-        Page<LeadJpaEntity> findLeadsBySelectedDealerId(UUID dealerId, Pageable pageable);
+        // Returns a paginated list of leads bought by a particular dealer
+        @Query("SELECT l FROM LeadJpaEntity l JOIN LeadPurchaseJpaEntity lp ON l.id = lp.leadId WHERE lp.dealerId = :dealerId")
+        Page<LeadJpaEntity> findPurchasedLeadsByDealerId(@Param("dealerId") UUID dealerId, Pageable pageable);
 }

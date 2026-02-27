@@ -9,8 +9,8 @@ const getBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
     
     // Default fallback for development
-    // Using LAN IP 192.168.1.4 for physical iPhone/Android devices
-    return 'http://192.168.1.4:8081';
+    // Using LAN IP 192.168.1.2 for physical iPhone/Android devices
+    return 'http://192.168.1.2:8081';
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -76,7 +76,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
         throw new Error(`API Error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
     console.log('[API DATA]', data);
     return data as T;
 }
@@ -194,11 +195,13 @@ export const getLeads = async (filter?: string, sort?: string) => {
     if (filter && filter !== 'All') {
         // Map UI label → backend LeadStatus enum value
         const statusMap: Record<string, string> = {
-            'New': 'NEW',
+            'Fresh': 'VERIFIED',   // Fresh = newly created leads dealers haven't touched yet
             'Follow-up': 'FOLLOW_UP',
             'Converted': 'CONVERTED',
+            'Skipped': 'SKIPPED',
         };
-        query.append('status', statusMap[filter] || filter);
+        const mappedStatus = statusMap[filter];
+        if (mappedStatus) query.append('filter', mappedStatus);
     }
 
     const sortMap: Record<string, string> = {
@@ -213,6 +216,14 @@ export const getLeads = async (filter?: string, sort?: string) => {
     return apiFetch(`/api/v1/leads?${query.toString()}`);
 };
 
+export const buyLead = async (leadId: string) => {
+    return apiFetch(`/api/v1/leads/${leadId}/buy`, { method: 'POST' });
+};
+
+export const getLeadOffers = async (leadId: string) => {
+    return apiFetch(`/api/v1/leads/${leadId}/offers`);
+};
+
 export const getUnlockedLeads = async (page = 0, size = 10) => {
     return apiFetch(`/api/v1/leads/unlocked?page=${page}&size=${size}`);
 };
@@ -221,7 +232,12 @@ export const getLeadDetails = async (leadId: string) => {
     return apiFetch(`/api/v1/leads/${leadId}`);
 };
 
-export const submitOffer = async (leadId: string, offerDetails: any) => {
+export const submitOffer = async (leadId: string, offerDetails: {
+    price: number;
+    tyreCondition: string;   // backend field name
+    stockAvailable: boolean; // required by backend
+    imageUrls?: string[];
+}) => {
     return apiFetch(`/api/v1/leads/${leadId}/offer`, {
         method: 'POST',
         body: JSON.stringify(offerDetails),
@@ -247,9 +263,16 @@ export const getPackages = async () => {
 };
 
 export const rechargeWallet = async (packageId: string) => {
-    return apiFetch('/api/v1/dealer/wallet/testRecharge', {
+    // Map quick-add labels to credit amounts; fall back to 500 for real package IDs
+    const creditMap: Record<string, number> = {
+        'quick-100': 100,
+        'quick-500': 500,
+        'quick-1000': 1000,
+    };
+    const credits = creditMap[packageId] ?? 500;
+    return apiFetch('/api/v1/dealer/wallet/addCredits', {
         method: 'POST',
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ credits }),
     });
 };
 

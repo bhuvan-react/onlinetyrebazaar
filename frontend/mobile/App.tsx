@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './src/types';
 import LoginScreen from './src/screens/LoginScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import RoadsideRegisterScreen from './src/screens/RoadsideRegisterScreen';
 import FullDealerRegisterScreen from './src/screens/FullDealerRegisterScreen';
 import MainTabs from './src/navigation/MainTabs';
@@ -22,6 +23,7 @@ export default function App() {
         }}
       >
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="RoadsideRegister" component={RoadsideRegisterScreen} />
         <Stack.Screen name="FullDealerRegister" component={FullDealerRegisterScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />

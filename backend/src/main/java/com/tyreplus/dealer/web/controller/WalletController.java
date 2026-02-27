@@ -85,10 +85,6 @@ public class WalletController {
         return ResponseEntity.ok(walletService.completeRecharge(dealer.getId(), request));
     }
 
-    /**
-     * Recharge wallet (TEST).
-     * POST /api/v1/dealer/wallet/testRecharge
-     */
     @Operation(summary = "Test Recharge (Dev Only)", description = "Simulates a recharge without actual payment. Only for testing purposes.", responses = {
             @ApiResponse(responseCode = "200", description = "Recharge successful"),
     })
@@ -98,5 +94,21 @@ public class WalletController {
             @Valid @RequestBody RechargeRequest request) {
         WalletResponse response = walletService.testRecharge(dealerDetails.getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DEV: Add credits directly — no Razorpay, no package.
+     * POST /api/v1/dealer/wallet/addCredits
+     * Body: { "credits": 500 }
+     */
+    @Operation(summary = "Add Credits (Dev Only)", description = "Directly adds credits to wallet. No payment required. Dev/testing only.")
+    @PostMapping("/wallet/addCredits")
+    public ResponseEntity<WalletResponse> addCredits(
+            @AuthenticationPrincipal DealerDetails dealerDetails,
+            @RequestBody java.util.Map<String, Integer> body) {
+        int credits = body.getOrDefault("credits", 0);
+        if (credits <= 0)
+            return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(walletService.addCredits(dealerDetails.getId(), credits));
     }
 }

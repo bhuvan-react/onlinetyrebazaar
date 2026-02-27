@@ -179,4 +179,31 @@ public class WalletService {
 
                 return getWalletDetails(dealerId);
         }
+
+        /**
+         * DEV ONLY: Directly credit any amount of credits to a dealer's wallet.
+         * No Razorpay, no package — used for testing the full lead flow.
+         */
+        @Transactional
+        public WalletResponse addCredits(UUID dealerId, int credits) {
+                Wallet wallet = walletRepository.findByDealerIdWithLock(dealerId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Wallet not found for dealer: " + dealerId));
+
+                wallet.credit(credits, 0); // all as purchased credits, no bonus
+                walletRepository.save(wallet);
+
+                Transaction transaction = new Transaction(
+                                wallet.getId(),
+                                dealerId,
+                                TransactionType.CREDIT,
+                                credits,
+                                credits,
+                                0,
+                                "Credits Added (Dev): " + credits,
+                                "DEV_" + UUID.randomUUID());
+                transactionRepository.save(transaction);
+
+                return getWalletDetails(dealerId);
+        }
 }

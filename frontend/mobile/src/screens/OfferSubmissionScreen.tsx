@@ -14,8 +14,8 @@ export default function OfferSubmissionScreen({ navigation, route }: Props) {
     const { leadId } = route.params;
 
     const [price, setPrice] = useState('');
-    const [condition, setCondition] = useState('New');
-    const [notes, setNotes] = useState('');
+    const [tyreCondition, setTyreCondition] = useState('New');
+    const [stockAvailable, setStockAvailable] = useState(true);
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
@@ -26,8 +26,8 @@ export default function OfferSubmissionScreen({ navigation, route }: Props) {
 
         const offerDetails = {
             price: Number(price),
-            condition: condition,
-            notes: notes
+            tyreCondition: tyreCondition,
+            stockAvailable: stockAvailable,
         };
 
         setLoading(true);
@@ -89,25 +89,31 @@ export default function OfferSubmissionScreen({ navigation, route }: Props) {
                         {CONDITIONS.map((c) => (
                             <TouchableOpacity
                                 key={c}
-                                style={[styles.conditionChip, condition === c ? styles.activeConditionChip : null]}
-                                onPress={() => setCondition(c)}
+                                style={[styles.conditionChip, tyreCondition === c ? styles.activeConditionChip : null]}
+                                onPress={() => setTyreCondition(c)}
                             >
-                                <Text style={[styles.conditionText, condition === c ? styles.activeConditionText : null]}>{c}</Text>
+                                <Text style={[styles.conditionText, tyreCondition === c ? styles.activeConditionText : null]}>{c}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Additional Notes</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Any additional details or terms..."
-                        multiline
-                        numberOfLines={4}
-                        value={notes}
-                        onChangeText={setNotes}
-                    />
+                    <Text style={styles.label}>Stock Available? *</Text>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity
+                            style={[styles.conditionChip, stockAvailable ? styles.activeConditionChip : null]}
+                            onPress={() => setStockAvailable(true)}
+                        >
+                            <Text style={[styles.conditionText, stockAvailable ? styles.activeConditionText : null]}>✅ Yes</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.conditionChip, !stockAvailable ? { borderColor: '#EF4444', backgroundColor: '#FEE2E2' } : null]}
+                            onPress={() => setStockAvailable(false)}
+                        >
+                            <Text style={[styles.conditionText, !stockAvailable ? { color: '#B91C1C', fontWeight: '600' } : null]}>❌ No</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
             </ScrollView>

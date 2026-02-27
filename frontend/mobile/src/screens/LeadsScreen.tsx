@@ -9,7 +9,7 @@ import { Filter, ChevronDown } from 'lucide-react-native';
 import LeadCard from '../components/LeadCard';
 import { getLeads, getUnlockedLeads } from '../services/api';
 
-const FILTERS = ['All', 'Fresh', 'Follow-up', 'Converted', 'Unlocked'];
+const FILTERS = ['All', 'Fresh', 'Follow-up', 'Converted', 'Skipped'];
 const SORT_OPTIONS = ['Date (Newest)', 'Date (Oldest)', 'Priority'];
 
 export default function LeadsScreen() {
@@ -42,7 +42,7 @@ export default function LeadsScreen() {
         setLoading(true);
         try {
             let data;
-            if (activeFilter === 'Unlocked') {
+            if (activeFilter === 'Follow-up') {
                 data = await getUnlockedLeads();
             } else {
                 data = await getLeads(activeFilter, sortBy);

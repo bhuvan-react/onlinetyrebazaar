@@ -6,7 +6,7 @@ import { COLORS } from '../constants/theme';
 import { Phone, MapPin, User, Car, Wrench, ArrowLeft, CheckCircle, XCircle, MessageSquare, Check } from 'lucide-react-native';
 import LeadQuestionnaireSummary from '../components/LeadQuestionnaireSummary';
 
-import { getLeadDetails, submitOffer, skipLead, getProfile, markLeadAsConverted } from '../services/api';
+import { getLeadDetails, submitOffer, skipLead, getProfile, markLeadAsConverted, buyLead } from '../services/api';
 import { ActivityIndicator } from 'react-native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeadDetails'>;
@@ -91,42 +91,104 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
     const handleWhatsApp = async () => {
         if (!lead) return;
 
-        const phoneNumber = '7995183828'; // 10-digit India number
-        const countryCode = '91';
+        // Use the customer's real phone number from the lead
+        const customerPhone = (lead as any)?.customerPhone || (lead as any)?.customerMobile;
 
-        const dealerName = dealerProfile?.businessName || 'Authorized Dealer';
-        // address is a flat string from the backend (e.g. "123 MG Road, Bangalore, Karnataka")
-        const dealerLocation = dealerProfile?.address || dealerProfile?.location || 'Your City';
-        const dealerContact = dealerProfile?.mobile || '9XXXXXXXXX';
+        if (!customerPhone) {
+            Alert.alert(
+                'Phone Not Available',
+                'Customer contact is only revealed after purchasing this lead.',
+            );
+            return;
+        }
+
+        // Dealer details from profile
+        const dealerBusiness = dealerProfile?.businessName || dealerProfile?.businessname || 'Authorized Dealer';
+        const dealerOwner   = dealerProfile?.ownerName   || dealerProfile?.ownername   || dealerBusiness;
+        const dealerCity    = dealerProfile?.city        || dealerProfile?.location     || 'your city';
+        const dealerPhone   = dealerProfile?.phoneNumber || dealerProfile?.mobile       || '';
+        const dealerStreet  = dealerProfile?.street      || '';
+
+        // Tyre details the customer selected on the web
+        const tyreBrand  = (lead as any)?.tyreBrand  || (lead as any)?.tyreInfo?.brand || 'the tyre';
+        const tyreSize   = (lead as any)?.tyreSize   || (lead as any)?.tyreInfo?.size  || '';
+        const tyreType   = (lead as any)?.tyreType   || '';
+        const tyreLabel  = [
+            tyreBrand,
+            tyreSize,
+            tyreType ? `(${tyreType.charAt(0).toUpperCase() + tyreType.slice(1).toLowerCase()})` : ''
+        ].filter(Boolean).join(' ');
 
         const message =
-            "Hi 👋\n\n" +
-            "Thank you for your tyre enquiry.\n\n" +
-            "You’ll be assisted by our authorized dealer:\n\n" +
-            `🏪 Dealer: ${dealerName}\n` +
-            `📍 Location: ${dealerLocation}\n` +
-            `📞 Contact: +91 ${dealerContact}\n\n` +
-            "Please feel free to share your requirement — the dealer will assist you shortly.";
+            `Hi 👋\n\n` +
+            `Thank you for showing your interest in *${tyreLabel}* on Tyre Bazaar!\n\n` +
+            `I'm *${dealerOwner}* from *${dealerBusiness}*${dealerStreet ? `, ${dealerStreet}` : ''}, ${dealerCity}.\n\n` +
+            `We have the tyre you're looking for and would love to assist you. ` +
+            `Please let us know a convenient time to visit or call us at 📞 ${dealerPhone}.\n\n` +
+            `Looking forward to serving you! 🙏`;
 
-
-        const cleanPhone = phoneNumber.replace(/\D/g, '');
-        const encodedMessage = encodeURIComponent(message);
-
-        const whatsappUrl = `https://wa.me/${countryCode}${cleanPhone}?text=${encodedMessage}`;
+        const cleanPhone  = customerPhone.replace(/\D/g, '');
+        const countryCode = cleanPhone.startsWith('91') ? '' : '91';
+        const whatsappUrl = `https://wa.me/${countryCode}${cleanPhone}?text=${encodeURIComponent(message)}`;
 
         try {
             await Linking.openURL(whatsappUrl);
-        } catch (error) {
-            Alert.alert('Error', 'Could not open WhatsApp');
+        } catch {
+            Alert.alert('Error', 'Could not open WhatsApp. Make sure it is installed.');
         }
     };
 
 
-    // handleMarkConverted removed as it's no longer part of the new flow
+    const handleBuyLead = async () => {
+        console.log('check')
+        Alert.alert(
+            'Buy Lead',
+            'This will deduct ₹50 credits from your wallet. The lead will appear in your Follow-up tab.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Buy Lead (₹50)',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        try {
+                            await buyLead(leadId);
+                            Alert.alert('Success', 'Lead purchased! Check your Follow-up tab.', [
+                                { text: 'OK', onPress: () => navigation.goBack() }
+                            ]);
+                        } catch (e: any) {
+                            const msg = e?.message?.includes('400') || e?.message?.includes('insufficient')
+                                ? 'Insufficient wallet balance. Please recharge.'
+                                : 'Failed to buy lead. Please try again.';
+                            Alert.alert('Error', msg);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
-    const handleSkip = () => {
-        Alert.alert('Skip Lead', 'Lead marked as skipped.', [
-            { text: 'OK', onPress: () => navigation.goBack() }
+    const handleSkip = async () => {
+        Alert.alert('Skip Lead', 'Are you sure you want to skip this lead?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Skip',
+                style: 'destructive',
+                onPress: async () => {
+                    setIsLoading(true);
+                    try {
+                        await skipLead(leadId);
+                        Alert.alert('Skipped', 'Lead moved to Skipped tab.', [
+                            { text: 'OK', onPress: () => navigation.goBack() }
+                        ]);
+                    } catch {
+                        Alert.alert('Error', 'Failed to skip lead.');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                }
+            }
         ]);
     };
 
@@ -272,36 +334,86 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
             {/* Bottom Actions based on Status */}
             <View style={styles.footer}>
 
-                {(lead.status === 'NEW' || lead.status === 'NEW_LEAD') && (
-                    <>
-                        <TouchableOpacity style={[styles.footerButton, styles.buyButton]} onPress={handleMakeOffer}>
-                            <CheckCircle size={20} color={COLORS.white} />
-                            <Text style={styles.buyButtonText}>Make an Offer</Text>
+                {/* FRESH / VERIFIED — show Connect if purchased, otherwise Buy+Skip */}
+                {(lead.status === 'VERIFIED' || lead.status === 'NEW') && (
+                    (lead as any).customerMobile ? (
+                        /* Already purchased — show Connect via WhatsApp */
+                        <TouchableOpacity
+                            style={[styles.footerButton, { backgroundColor: '#25D366', borderColor: '#25D366' }]}
+                            onPress={handleWhatsApp}
+                        >
+                            <MessageSquare size={20} color={COLORS.white} />
+                            <Text style={styles.buyButtonText}>Connect via WhatsApp</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.footerButton, styles.skipButton]} onPress={handleSkip}>
-                            <XCircle size={20} color={COLORS.gray[700]} />
-                            <Text style={styles.skipButtonText}>Skip Lead</Text>
-                        </TouchableOpacity>
-                    </>
+                    ) : (
+                        /* Not yet purchased — Buy + Skip */
+                        <>
+                            <TouchableOpacity
+                                style={[styles.footerButton, styles.buyButton]}
+                                onPress={handleBuyLead}
+                                disabled={isLoading}
+                            >
+                                {isLoading
+                                    ? <ActivityIndicator color={COLORS.white} />
+                                    : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (₹50)</Text></>}
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.footerButton, styles.skipButton]} onPress={handleSkip} disabled={isLoading}>
+                                <XCircle size={20} color={COLORS.gray[700]} />
+                                <Text style={styles.skipButtonText}>Skip</Text>
+                            </TouchableOpacity>
+                        </>
+                    )
                 )}
 
-                {(lead.status === 'FOLLOW_UP' || lead.status === 'BOUGHT') && (
+                {/* SKIPPED — Buy from Skipped tab */}
+                {lead.status === 'SKIPPED' && (
+                    <TouchableOpacity
+                        style={[styles.footerButton, styles.buyButton]}
+                        onPress={handleBuyLead}
+                        disabled={isLoading}
+                    >
+                        {isLoading
+                            ? <ActivityIndicator color={COLORS.white} />
+                            : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (₹50)</Text></>}
+                    </TouchableOpacity>
+                )}
+
+                {/* FOLLOW-UP — WhatsApp customer (primary) + Tyre Replaced (secondary) */}
+                {(lead.status === 'FOLLOW_UP' || lead.status === 'DEALER_SELECTED' || lead.status === 'OFFER_RECEIVED') && (
+                    <View style={{ flex: 1, gap: 10 }}>
+                        {/* Primary: WhatsApp customer */}
+                        <TouchableOpacity
+                            style={[styles.footerButton, { backgroundColor: '#25D366', borderColor: '#25D366', flex: 0 }]}
+                            onPress={handleWhatsApp}
+                        >
+                            <MessageSquare size={20} color={COLORS.white} />
+                            <Text style={styles.buyButtonText}>💬 WhatsApp Customer</Text>
+                        </TouchableOpacity>
+                        {/* Secondary: Tyre Replaced */}
+                        <TouchableOpacity
+                            style={[styles.footerButton, { backgroundColor: '#22C55E', borderColor: '#22C55E', flex: 0 }]}
+                            onPress={handleMarkAsConverted}
+                            disabled={isLoading}
+                        >
+                            {isLoading
+                                ? <ActivityIndicator color={COLORS.white} />
+                                : <><Check size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>✅ Tyre Replaced</Text></>}
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* BOUGHT (legacy compat) — same as FOLLOW_UP  */}
+                {lead.status === 'BOUGHT' && (
                     <TouchableOpacity style={[styles.footerButton, { backgroundColor: '#25D366', borderColor: '#25D366' }]} onPress={handleWhatsApp}>
                         <Text style={styles.buyButtonText}>Chat on WhatsApp</Text>
                     </TouchableOpacity>
                 )}
 
+                {/* CONVERTED — done state */}
                 {lead.status === 'CONVERTED' && (
                     <View style={[styles.footerButton, { backgroundColor: COLORS.gray[100], borderColor: COLORS.gray[200] }]}>
                         <CheckCircle size={20} color={COLORS.teal.main} />
-                        <Text style={[styles.buyButtonText, { color: COLORS.teal.main }]}>Lead Converted</Text>
-                    </View>
-                )}
-
-                {/* Fallback for other statuses like LOST if any */}
-                {(lead.status !== 'NEW' && lead.status !== 'NEW_LEAD' && lead.status !== 'FOLLOW_UP' && lead.status !== 'BOUGHT' && lead.status !== 'CONVERTED') && (
-                    <View style={[styles.footerButton, { backgroundColor: COLORS.gray[100], borderStyle: 'dashed', borderColor: COLORS.gray[400] }]}>
-                        <Text style={[styles.buyButtonText, { color: COLORS.gray[500] }]}>Action Unavailable</Text>
+                        <Text style={[styles.buyButtonText, { color: COLORS.teal.main }]}>Lead Converted ✓</Text>
                     </View>
                 )}
 

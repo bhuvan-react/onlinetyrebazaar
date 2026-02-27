@@ -7,14 +7,15 @@ interface LeadCardProps {
     name: string;
     vehicle: string;
     tyreSize?: string;
+    tyreBrand?: string;
     tyreType?: string;
     location: string;
     date: string;
-    status: 'New' | 'Follow-up' | 'Converted';
+    status: 'New' | 'Fresh' | 'Follow-up' | 'Converted' | 'Skipped';
     onPress: () => void;
 }
 
-export default function LeadCard({ name, vehicle, tyreSize, tyreType, location, date, status, onPress }: LeadCardProps) {
+export default function LeadCard({ name, vehicle, tyreSize, tyreBrand, tyreType, location, date, status, onPress }: LeadCardProps) {
     // Derive tyre type display — defaults to New if no type set
     const isNew = !tyreType || tyreType.toUpperCase() === 'NEW';
     const tyreTypeColor = isNew ? COLORS.teal.main : '#9333EA';
@@ -27,6 +28,7 @@ export default function LeadCard({ name, vehicle, tyreSize, tyreType, location, 
                 <View style={styles.headerLeft}>
                     <Text style={styles.name}>{name}</Text>
                     <Text style={styles.vehicle}>{vehicle}</Text>
+                    {tyreBrand && <Text style={[styles.tyreSize, { color: COLORS.teal.dark, fontWeight: '600' }]}>{tyreBrand}</Text>}
                     {tyreSize && <Text style={styles.tyreSize}>{tyreSize}</Text>}
                 </View>
                 {/* Right: New / Used badge replacing VERIFIED */}

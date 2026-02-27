@@ -146,6 +146,41 @@ public class DealerAuthController {
         }
 
         /**
+         * 1.4 Forgot Password — sends a reset link to the dealer's email.
+         * Deliberately returns 200 even if email/mobile not found (prevents
+         * enumeration).
+         */
+        @Operation(summary = "Forgot Password", description = "Sends a password reset link to the dealer's registered email.")
+        @PostMapping("/forgot-password")
+        public ResponseEntity<Void> forgotPassword(@RequestBody java.util.Map<String, String> body) {
+                String identifier = body.getOrDefault("identifier", "").trim();
+                if (identifier.isBlank()) {
+                        return ResponseEntity.badRequest().build();
+                }
+                try {
+                        authService.forgotPassword(identifier);
+                } catch (Exception e) {
+                        // Swallow — don't reveal whether the account exists
+                }
+                return ResponseEntity.ok().build();
+        }
+
+        /**
+         * 1.5 Reset Password — validates token and updates password.
+         */
+        @Operation(summary = "Reset Password", description = "Validates the reset token and sets a new password.")
+        @PostMapping("/reset-password")
+        public ResponseEntity<Void> resetPassword(@RequestBody java.util.Map<String, String> body) {
+                String token = body.getOrDefault("token", "").trim();
+                String newPassword = body.getOrDefault("newPassword", "").trim();
+                if (token.isBlank() || newPassword.isBlank()) {
+                        return ResponseEntity.badRequest().build();
+                }
+                authService.resetPassword(token, newPassword);
+                return ResponseEntity.ok().build();
+        }
+
+        /**
          * Set password (OTP-authenticated user only).
          * Requires JWT in Authorization header.
          */

@@ -8,6 +8,7 @@ import com.tyreplus.dealer.domain.entity.LeadStatus;
 import com.tyreplus.dealer.domain.repository.CustomerRepository;
 import com.tyreplus.dealer.domain.repository.LeadRepository;
 import com.tyreplus.dealer.domain.repository.TyreRepository;
+import com.tyreplus.dealer.infrastructure.persistence.repository.LeadPurchaseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ public class LeadDiscoveryService {
     private final LeadRepository leadRepository;
     private final CustomerRepository customerRepository;
     private final TyreRepository tyreRepository;
+    private final LeadPurchaseJpaRepository leadPurchaseJpaRepository;
 
     @Transactional
     public LeadDetailsResponse createLead(LeadRequest request, String customerMobile) {
@@ -179,10 +181,13 @@ public class LeadDiscoveryService {
     }
 
     private LeadDetailsResponse mapToResponse(Lead lead, UUID currentDealerId) {
-        // Only show customer mobile if this dealer is the selected dealer
+        // Show customer mobile if dealer is the selected dealer OR has purchased the
+        // lead
         boolean isSelectedDealer = lead.getSelectedDealerId() != null
                 && lead.getSelectedDealerId().equals(currentDealerId);
-        String visibleMobile = isSelectedDealer ? lead.getCustomerMobile() : null;
+        boolean hasPurchased = currentDealerId != null
+                && leadPurchaseJpaRepository.existsByLeadIdAndDealerId(lead.getId(), currentDealerId);
+        String visibleMobile = (isSelectedDealer || hasPurchased) ? lead.getCustomerMobile() : null;
 
         String customerName = "Customer"; // Default
         UUID customerId = lead.getCustomerId();

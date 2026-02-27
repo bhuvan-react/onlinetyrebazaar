@@ -14,12 +14,15 @@ import com.tyreplus.dealer.domain.entity.Customer;
 import com.tyreplus.dealer.domain.valueobject.Address;
 import com.tyreplus.dealer.domain.valueobject.BusinessHours;
 import com.tyreplus.dealer.domain.valueobject.ContactDetails;
+import com.tyreplus.dealer.infrastructure.persistence.entity.PasswordResetTokenEntity;
+import com.tyreplus.dealer.infrastructure.persistence.repository.PasswordResetTokenRepository;
 import com.tyreplus.dealer.infrastructure.security.JwtUtil;
 import com.tyreplus.dealer.infrastructure.security.RefreshTokenService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -40,6 +43,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     // Constructor updated to include WalletRepository and CustomerRepository
     public AuthService(DealerRepository dealerRepository,
@@ -48,7 +53,9 @@ public class AuthService {
             OtpService otpService,
             JwtUtil jwtUtil,
             RefreshTokenService refreshTokenService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            EmailService emailService) {
         this.dealerRepository = dealerRepository;
         this.customerRepository = customerRepository;
         this.walletRepository = walletRepository;
@@ -56,10 +63,73 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailService = emailService;
     }
 
     public String generateOtp(String mobile) {
         return otpService.generateOtp(mobile);
+    }
+
+    /**
+     * Step 1: Dealer requests a password reset.
+     * Generates a secure token, stores it with 15-min expiry, sends email.
+     */
+    @Transactional
+    public void forgotPassword(String identifier) {
+        Dealer dealer = dealerRepository.findByPhoneNumberOrEmail(identifier)
+                .orElseThrow(() -> new UserNotFoundException(
+                        "No dealer account found with: " + identifier));
+
+        // Invalidate any existing tokens for this dealer
+        passwordResetTokenRepository.deleteAllByDealerId(dealer.getId());
+
+        // Create a new reset token valid for 15 minutes
+        PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
+                .dealerId(dealer.getId())
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .used(false)
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+
+        // Send email
+        String email = dealer.getContactDetails().email();
+        String name = dealer.getBusinessName();
+        emailService.sendPasswordResetEmail(email, name, resetToken.getToken().toString());
+    }
+
+    /**
+     * Step 2: Dealer submits new password with token from email.
+     */
+    @Transactional
+    public void resetPassword(String tokenStr, String newPassword) {
+        UUID tokenUuid;
+        try {
+            tokenUuid = UUID.fromString(tokenStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid reset token.");
+        }
+
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token."));
+
+        if (resetToken.isUsed()) {
+            throw new IllegalArgumentException("This reset link has already been used.");
+        }
+        if (resetToken.isExpired()) {
+            throw new IllegalArgumentException("Reset link has expired. Please request a new one.");
+        }
+
+        // Update password
+        Dealer dealer = dealerRepository.findById(resetToken.getDealerId())
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found."));
+
+        dealer.setPasswordHash(passwordEncoder.encode(newPassword));
+        dealerRepository.save(dealer);
+
+        // Consume the token
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
     }
 
     /**

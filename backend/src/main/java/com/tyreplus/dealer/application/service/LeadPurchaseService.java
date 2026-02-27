@@ -1,7 +1,6 @@
 package com.tyreplus.dealer.application.service;
 
 import com.tyreplus.dealer.application.dto.LeadDetailsResponse;
-import com.tyreplus.dealer.application.exception.InsufficientFundsException;
 import com.tyreplus.dealer.domain.entity.Lead;
 import com.tyreplus.dealer.domain.entity.Transaction;
 import com.tyreplus.dealer.domain.entity.TransactionType;
@@ -9,6 +8,8 @@ import com.tyreplus.dealer.domain.entity.Wallet;
 import com.tyreplus.dealer.domain.repository.LeadRepository;
 import com.tyreplus.dealer.domain.repository.TransactionRepository;
 import com.tyreplus.dealer.domain.repository.WalletRepository;
+import com.tyreplus.dealer.infrastructure.persistence.entity.LeadPurchaseJpaEntity;
+import com.tyreplus.dealer.infrastructure.persistence.repository.LeadPurchaseJpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tyreplus.dealer.domain.repository.TyreRepository;
@@ -22,23 +23,73 @@ import java.util.UUID;
 @Service
 public class LeadPurchaseService {
 
+    private static final int LEAD_COST_CREDITS = 50;
+
     private final LeadRepository leadRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository;
     private final TyreRepository tyreRepository;
+    private final LeadPurchaseJpaRepository leadPurchaseJpaRepository;
 
     public LeadPurchaseService(
             LeadRepository leadRepository,
             WalletRepository walletRepository,
             TransactionRepository transactionRepository,
             com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository,
-            TyreRepository tyreRepository) {
+            TyreRepository tyreRepository,
+            LeadPurchaseJpaRepository leadPurchaseJpaRepository) {
         this.leadRepository = leadRepository;
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.customerRepository = customerRepository;
         this.tyreRepository = tyreRepository;
+        this.leadPurchaseJpaRepository = leadPurchaseJpaRepository;
+    }
+
+    /**
+     * Dealer buys/unlocks a lead: deducts credits from their wallet
+     * and records the purchase so the lead appears in their Follow-up tab.
+     * Multiple dealers can independently buy the same lead.
+     */
+    @Transactional
+    public void buyLead(UUID leadId, UUID dealerId) {
+        // 1. Idempotency — already purchased
+        if (leadPurchaseJpaRepository.existsByLeadIdAndDealerId(leadId, dealerId)) {
+            return; // already bought, silently succeed
+        }
+
+        // 2. Load lead
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+
+        // 3. Load & lock wallet
+        Wallet wallet = walletRepository.findByDealerIdWithLock(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for dealer"));
+
+        // 4. Deduct credits (throws InsufficientFundsException if balance too low)
+        Wallet.DeductionBreakdown breakdown = wallet.deduct(LEAD_COST_CREDITS);
+        walletRepository.save(wallet);
+
+        // 5. Record transaction
+        Transaction transaction = new Transaction(
+                wallet.getId(),
+                dealerId,
+                TransactionType.DEBIT,
+                LEAD_COST_CREDITS,
+                breakdown.purchased(),
+                breakdown.bonus(),
+                "Lead Purchased: " + lead.getVehicleModel(),
+                null);
+        transactionRepository.save(transaction);
+
+        // 6. Insert lead_purchases row
+        LeadPurchaseJpaEntity purchase = LeadPurchaseJpaEntity.builder()
+                .leadId(leadId)
+                .dealerId(dealerId)
+                .costPaid(LEAD_COST_CREDITS)
+                .build();
+        leadPurchaseJpaRepository.save(purchase);
     }
 
     /**

@@ -12,5 +12,6 @@ public enum LeadStatus {
     DUPLICATE,
     OFFER_RECEIVED,
     DEALER_SELECTED,
+    SKIPPED,
     CLOSED
 }

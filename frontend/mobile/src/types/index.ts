@@ -2,6 +2,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootStackParamList = {
     Login: undefined;
+    ForgotPassword: undefined;
     RoadsideRegister: undefined;
     FullDealerRegister: undefined;
     MainTabs: NavigatorScreenParams<BottomTabParamList>;
@@ -81,12 +82,20 @@ export interface Lead {
     customerName: string;
     customerPhone?: string; // unlocked for selected dealer
     location: string;
+    locationArea?: string;
+    locationPincode?: string;
     vehicleModel: string;
     vehicleYear?: string;
     tyreSize?: string;
+    tyreBrand?: string;
+    tyreType?: string; // 'NEW' | 'USED'
+    vehicleType?: string;
     serviceRequest: string;
     tyreId?: string;
     tyreInfo?: AssociatedTyreInfo;
-    status: 'NEW' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD' | 'CONTACTED' | 'LOST' | 'DEALER_SELECTED' | 'VERIFIED';
+    createdAt?: string;
+    status: 'NEW' | 'VERIFIED' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD'
+          | 'CONTACTED' | 'LOST' | 'DEALER_SELECTED' | 'VERIFIED' | 'OFFER_RECEIVED'
+          | 'SKIPPED' | 'CLOSED';
     questionnaire?: QuestionnaireItem[];
 }

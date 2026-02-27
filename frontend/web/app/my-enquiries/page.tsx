@@ -116,12 +116,12 @@ export default function MyEnquiriesPage() {
                                                 {new Date(lead.createdAt).toLocaleDateString()}
                                             </div>
                                             
-                                            {/* <button 
+                                            <button 
                                                 className="w-full sm:w-auto mt-2 px-5 py-2 border border-[#0D9488] text-[#0D9488] font-medium rounded-xl hover:bg-teal-50 transition-colors text-sm"
                                                 onClick={() => alert("Offer viewing coming in next milestone!")}
                                             >
                                                 View Dealer Offers
-                                            </button> */}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

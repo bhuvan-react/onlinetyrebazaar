@@ -51,26 +51,44 @@ export default function WalletScreen() {
         }
     };
 
-    const handleAddMoney = () => {
-        Alert.alert('Add Money', 'Redirecting to payment gateway...');
+    const [addingCredits, setAddingCredits] = useState(false);
+
+    // Quick top-up amounts (in credits) — maps to a fake packageId the backend ignores
+    const QUICK_AMOUNTS = [
+        { label: '100 Credits', packageId: 'quick-100' },
+        { label: '500 Credits', packageId: 'quick-500' },
+        { label: '1000 Credits', packageId: 'quick-1000' },
+    ];
+
+    const handleQuickAdd = async (packageId: string, label: string) => {
+        setAddingCredits(true);
+        try {
+            await rechargeWallet(packageId);
+            Alert.alert('✅ Credits Added', `${label} added to your wallet!`);
+            loadWallet();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to add credits. Make sure the backend is running.');
+        } finally {
+            setAddingCredits(false);
+        }
     };
 
-    const handleBuyPackage = (pkgId: string, pkgName: string) => {
+    const handleBuyPackage = async (pkgId: string, pkgName: string) => {
         Alert.alert(
-            'Buy Package',
-            `Proceed to buy ${pkgName}?`,
+            'Add Credits',
+            `Add credits from the "${pkgName}" package?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Confirm',
+                    text: 'Add Credits',
                     onPress: async () => {
                         setLoading(true);
                         try {
                             await rechargeWallet(pkgId);
-                            Alert.alert('Success', 'Credits added successfully!');
+                            Alert.alert('✅ Success', 'Credits added to your wallet!');
                             loadWallet();
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to purchase package');
+                        } catch {
+                            Alert.alert('Error', 'Failed to add credits.');
                             setLoading(false);
                         }
                     }
@@ -78,6 +96,9 @@ export default function WalletScreen() {
             ]
         );
     };
+
+
+
 
     if (loading) {
         return (
@@ -93,14 +114,26 @@ export default function WalletScreen() {
             {/* Balance Card */}
             <View style={styles.balanceCard}>
                 <View>
-                    <Text style={styles.balanceLabel}>Current Credits</Text>
-                    <Text style={styles.balanceAmount}>{walletData?.balance}</Text>
-                </View>
-                {/* <TouchableOpacity style={styles.addMoneyButton} onPress={handleAddMoney}>
-                    <Plus size={16} color={COLORS.teal.dark} />
-                    <Text style={styles.addMoneyText}>Add Money</Text>
-                </TouchableOpacity> */}
-                <Wallet size={100} color="rgba(255,255,255,0.1)" style={styles.bgIcon} />
+                <Text style={styles.balanceLabel}>Current Credits</Text>
+                <Text style={styles.balanceAmount}>{walletData?.balance ?? '—'}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 4 }}>
+                    Each lead costs 50 credits
+                </Text>
+            </View>
+            <View style={{ gap: 8, zIndex: 1 }}>
+                {QUICK_AMOUNTS.map(q => (
+                    <TouchableOpacity
+                        key={q.packageId}
+                        style={styles.addMoneyButton}
+                        onPress={() => handleQuickAdd(q.packageId, q.label)}
+                        disabled={addingCredits}
+                    >
+                        <Plus size={12} color={COLORS.teal.dark} />
+                        <Text style={styles.addMoneyText}>{q.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+            <Wallet size={80} color="rgba(255,255,255,0.08)" style={styles.bgIcon} />
             </View>
 
             {/* Packages Section */}

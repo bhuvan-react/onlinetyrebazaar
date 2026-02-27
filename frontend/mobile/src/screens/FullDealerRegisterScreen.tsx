@@ -444,7 +444,7 @@ export default function FullDealerRegisterScreen({ navigation }: Props) {
 
             {/* Benefits Section */}
             <View style={styles.benefitsBox}>
-                <Text style={styles.benefitsTitle}>Why Join TyrePlus?</Text>
+                <Text style={styles.benefitsTitle}>Why Join Online Tyre Bazaar?</Text>
                 <Text style={styles.benefitText}>✓ Increased visibility to customers</Text>
                 <Text style={styles.benefitText}>✓ Digital tools for business management</Text>
                 <Text style={styles.benefitText}>✓ Marketing support</Text>

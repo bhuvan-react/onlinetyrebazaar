@@ -6,10 +6,10 @@ import { COLORS } from '../constants/theme';
 export default function Header({ subtitle }: HeaderProps) {
     return (
         <View style={styles.container}>
-            {/* TyrePlus Logo */}
+            {/* Online Tyre Bazaar Logo */}
             <View style={styles.logoContainer}>
                 {/* <Text style={styles.logoEmoji}>🔴</Text> */}
-                <Text style={styles.logoText}> {``} TyrePlus</Text>
+                <Text style={styles.logoText}> {``} Online Tyre Bazaar</Text>
             </View>
 
             {/* Subtitle */}
