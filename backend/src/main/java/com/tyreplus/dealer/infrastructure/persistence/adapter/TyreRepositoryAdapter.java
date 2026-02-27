@@ -53,10 +53,33 @@ public class TyreRepositoryAdapter implements TyreRepository {
         return repository.findDistinctPatternsByBrandAndSize(brand, size);
     }
 
+    private String getFallbackImage(String brand, String type) {
+        if (brand == null)
+            return "/car-tyre-new.jpg";
+        String b = brand.toLowerCase();
+
+        if ("used".equalsIgnoreCase(type) && (b.equals("apollo") || b.equals("ceat") || b.equals("mrf"))) {
+            return "/used-" + b + "-tyre.jpg";
+        }
+
+        if (b.equals("apollo") || b.equals("bridgestone") || b.equals("ceat") ||
+                b.equals("goodyear") || b.equals("jk tyre") || b.equals("mrf") || b.equals("yokohama")) {
+            String brandSlug = b.replaceAll("\\s+", "-");
+            return "/" + brandSlug + "-car-tyre.jpg";
+        }
+
+        return "/car-tyre-new.jpg";
+    }
+
     private Tyre toDomain(TyreJpaEntity entity) {
         List<String> featureList = entity.getFeatures() != null
                 ? Arrays.asList(entity.getFeatures().split(",\\s*"))
                 : Collections.emptyList();
+
+        String imageUrl = entity.getImageUrl();
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            imageUrl = getFallbackImage(entity.getBrand(), entity.getType());
+        }
 
         return Tyre.builder()
                 .id(entity.getId())
@@ -66,7 +89,7 @@ public class TyreRepositoryAdapter implements TyreRepository {
                 .price(entity.getPrice())
                 .productCode(entity.getProductCode())
                 .features(featureList)
-                .imageUrl(entity.getImageUrl())
+                .imageUrl(imageUrl)
                 .warrantyYears(entity.getWarrantyYears())
                 // Extended fields
                 .newPrice(entity.getNewPrice())

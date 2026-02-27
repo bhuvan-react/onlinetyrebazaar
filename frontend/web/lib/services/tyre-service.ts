@@ -10,7 +10,27 @@ export interface TyreFilters {
 }
 
 // Map raw backend response (snake_case/camelCase from Spring) to frontend Tyre interface
+function getFallbackImage(brand: string, type?: string): string {
+    const b = brand.toLowerCase()
+    
+    // Check if we have a specific used tyre image
+    if (type === "used" && ["apollo", "ceat", "mrf"].includes(b)) {
+        return `/used-${b}-tyre.jpg`
+    }
+    
+    // Check if we have a specific brand tyre image
+    if (["apollo", "bridgestone", "ceat", "goodyear", "jk tyre", "mrf", "yokohama"].includes(b)) {
+        const brandSlug = b.replace(/\s+/g, '-')
+        return `/${brandSlug}-car-tyre.jpg`
+    }
+    
+    // Default generic tyre image
+    return "/car-tyre-new.jpg"
+}
+
 function mapBackendTyre(raw: any): Tyre {
+    const fallbackImage = getFallbackImage(raw.brand || "", raw.type)
+    
     return {
         id: String(raw.id),
         brand: raw.brand,
@@ -18,8 +38,8 @@ function mapBackendTyre(raw: any): Tyre {
         model: raw.pattern,            // alias: TyreCard reads `model`
         size: raw.size,
         price: raw.price,
-        image: raw.imageUrl || "",     // TyreCard reads `image`
-        imageUrl: raw.imageUrl || "",
+        image: raw.imageUrl || fallbackImage,     // TyreCard reads `image`
+        imageUrl: raw.imageUrl || fallbackImage,
         features: Array.isArray(raw.features)
             ? raw.features
             : typeof raw.features === "string"
