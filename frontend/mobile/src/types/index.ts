@@ -9,6 +9,16 @@ export type RootStackParamList = {
     LeadDetails: { leadId: string };
     OfferSubmission: { leadId: string };
     EditProfile: undefined;
+    RazorpayPayment: {
+        gatewayOrderId: string;
+        amountInPaise: number;
+        currency: string;
+        keyId: string;
+        packageId: string;
+        packageName: string;
+        dealerMobile?: string;
+        dealerEmail?: string;
+    };
 };
 
 export type BottomTabParamList = {

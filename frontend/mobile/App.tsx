@@ -10,6 +10,7 @@ import MainTabs from './src/navigation/MainTabs';
 import LeadDetailsScreen from './src/screens/LeadDetailsScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import OfferSubmissionScreen from './src/screens/OfferSubmissionScreen';
+import RazorpayPaymentScreen from './src/screens/RazorpayPaymentScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -30,6 +31,7 @@ export default function App() {
         <Stack.Screen name="LeadDetails" component={LeadDetailsScreen} />
         <Stack.Screen name="OfferSubmission" component={OfferSubmissionScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="RazorpayPayment" component={RazorpayPaymentScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

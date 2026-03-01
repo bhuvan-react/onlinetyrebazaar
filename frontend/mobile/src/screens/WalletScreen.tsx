@@ -1,18 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { Wallet, CreditCard, History, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { getWalletData, getPackages, initiateRecharge, completeRecharge } from '../services/api';
 
-let RazorpayCheckout: any = null;
-try {
-    RazorpayCheckout = require('react-native-razorpay').default;
-} catch (e) {
-    console.warn("Razorpay native module not found. Payment will not work in standard Expo Go.");
-}
 const PACKAGES = [
     { id: '1', name: 'Starter', price: '₹ 500', credits: '10 Leads' },
     { id: '2', name: 'Growth', price: '₹ 2,000', credits: '50 Leads', popular: true },
@@ -28,8 +22,14 @@ const HISTORY = [
 
 export default function WalletScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const [walletData, setWalletData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const route = useRoute<any>();
+    const [walletData, setWalletData] = useState<any>({
+        balance: 0,
+        packages: [],
+        history: []
+    });
+    const [loading, setLoading] = useState(false);
+    const [packagesLoading, setPackagesLoading] = useState(true);
 
     useFocusEffect(
         useCallback(() => {
@@ -46,88 +46,51 @@ export default function WalletScreen() {
 
             setWalletData({
                 balance: walletDataResponse.totalCredits || 0,
-                packages: packagesData || PACKAGES,
+                packages: (packagesData && packagesData.length > 0)
+                    ? packagesData.map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.price ?? `₹ ${p.priceInInr}`,
+                        credits: p.credits ?? `${p.totalCredits} Credits`,
+                        popular: p.popular
+                    }))
+                    : [],
                 history: walletDataResponse.transactions || []
             });
         } catch (error) {
             console.log('Failed to load wallet data', error);
+            // Show hardcoded packages as last resort fallback (they won't have real UUIDs)
+            // so keep packages empty to prevent 400 errors on initiate
+        } finally {
+            setLoading(false);
+            setPackagesLoading(false);
+        }
+    };
+
+    const handleBuyPackage = async (pkgId: string, pkgName: string) => {
+        setLoading(true);
+        try {
+            // 1. Get Razorpay Order ID from backend
+            const orderRes: any = await initiateRecharge(pkgId);
+
+            // 2. Navigate to the WebView Razorpay payment screen
+            navigation.navigate('RazorpayPayment', {
+                gatewayOrderId: orderRes.orderId,
+                amountInPaise: orderRes.amount,
+                currency: orderRes.currency,
+                keyId: orderRes.key,
+                packageId: pkgId,
+                packageName: pkgName,
+            });
+        } catch (error: any) {
+            const msg = error?.message?.includes('401') ? 'Session expired. Please login again.' : 'Failed to initiate payment. Please try again.';
+            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleBuyPackage = async (pkgId: string, pkgName: string) => {
-        Alert.alert(
-            'Add Credits',
-            `Buy the "${pkgName}" package?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Pay Now',
-                    onPress: async () => {
-                        setLoading(true);
-                        try {
-                            if (!RazorpayCheckout) {
-                                Alert.alert('Unsupported', 'Razorpay is not supported in this Expo Go environment. Please run a development build (npx expo run:android or run:ios).');
-                                setLoading(false);
-                                return;
-                            }
 
-                            // 1. Get Razorpay Order ID from backend
-                            const orderRes: any = await initiateRecharge(pkgId);
-                            
-                            // 2. Open Razorpay UI
-                            const options = {
-                                description: `Wallet Recharge: ${pkgName}`,
-                                currency: orderRes.currency,
-                                key: orderRes.keyId,
-                                amount: orderRes.amountInPaise,
-                                name: 'Online Tyre Bazaar',
-                                order_id: orderRes.gatewayOrderId,
-                                theme: { color: COLORS.teal.main }
-                            };
-
-                            RazorpayCheckout.open(options).then(async (data: any) => {
-                                // 3. Verify Payment Signature Backend
-                                try {
-                                    await completeRecharge({
-                                        gatewayOrderId: data.razorpay_order_id,
-                                        gatewayPaymentId: data.razorpay_payment_id,
-                                        gatewaySignature: data.razorpay_signature,
-                                        packageId: pkgId
-                                    });
-                                    Alert.alert('✅ Success', 'Credits added to your wallet!');
-                                    loadWallet();
-                                } catch (err) {
-                                    Alert.alert('Verification Failed', 'Payment succeeded but credit update failed. Please contact support.');
-                                }
-                            }).catch((error: any) => {
-                                // Payment cancelled or failed
-                                Alert.alert('Payment Failed', `Code: ${error.code} | Description: ${error.description}`);
-                            }).finally(() => {
-                                setLoading(false);
-                            });
-
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to initiate payment.');
-                            setLoading(false);
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-
-
-
-    if (loading) {
-        return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -158,6 +121,11 @@ export default function WalletScreen() {
             </View>
             {/* Packages Section */}
             <Text style={styles.sectionTitle}>Buy Credits</Text>
+            {packagesLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                    <Text style={{ color: COLORS.gray[500], fontSize: 14 }}>Loading packages...</Text>
+                </View>
+            ) : (
             <View style={styles.packagesGrid}>
                 {walletData?.packages.map((pkg: any) => (
                     <TouchableOpacity
@@ -176,6 +144,7 @@ export default function WalletScreen() {
                     </TouchableOpacity>
                 ))}
             </View>
+            )}
 
             {/* History Section */}
             <Text style={styles.sectionTitle}>Transaction History</Text>
