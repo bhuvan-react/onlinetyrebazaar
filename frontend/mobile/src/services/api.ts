@@ -9,8 +9,8 @@ const getBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
     
     // Default fallback for development
-    // Using LAN IP 192.168.1.2 for physical iPhone/Android devices
-    return 'http://192.168.1.2:8081';
+    // Using LAN IP 192.168.1.9 for physical iPhone/Android devices
+    return 'http://192.168.1.9:8081';
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -262,17 +262,17 @@ export const getPackages = async () => {
     return apiFetch('/api/v1/dealer/packages');
 };
 
-export const rechargeWallet = async (packageId: string) => {
-    // Map quick-add labels to credit amounts; fall back to 500 for real package IDs
-    const creditMap: Record<string, number> = {
-        'quick-100': 100,
-        'quick-500': 500,
-        'quick-1000': 1000,
-    };
-    const credits = creditMap[packageId] ?? 500;
-    return apiFetch('/api/v1/dealer/wallet/addCredits', {
+export const initiateRecharge = async (packageId: string) => {
+    return apiFetch('/api/v1/dealer/recharge/initiate', {
         method: 'POST',
-        body: JSON.stringify({ credits }),
+        body: JSON.stringify({ packageId }),
+    });
+};
+
+export const completeRecharge = async (data: { gatewayOrderId: string; gatewayPaymentId: string; gatewaySignature: string; packageId: string; }) => {
+    return apiFetch('/api/v1/dealer/recharge/verify', {
+        method: 'POST',
+        body: JSON.stringify(data),
     });
 };
 

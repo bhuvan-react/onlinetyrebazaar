@@ -20,8 +20,11 @@ public class LeadStatusUpdateService {
                 .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
 
         // Security: Prevent Dealer A from updating Dealer B's leads
-        if (!dealerId.equals(lead.getSelectedDealerId())) {
-            throw new IllegalStateException("Unauthorized: This lead belongs to another dealer.");
+        // Exception: If we are just skipping a fresh lead, anyone can do it.
+        if (newStatus != LeadStatus.SKIPPED) {
+            if (!dealerId.equals(lead.getSelectedDealerId())) {
+                throw new IllegalStateException("Unauthorized: This lead belongs to another dealer.");
+            }
         }
 
         // Logic: Once a lead is CLOSED, you probably shouldn't allow changing it back

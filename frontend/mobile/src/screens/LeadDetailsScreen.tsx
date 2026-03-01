@@ -88,10 +88,9 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
         navigation.navigate('OfferSubmission', { leadId });
     };
 
-    const handleWhatsApp = async () => {
+    const handleWhatsApp = () => {
         if (!lead) return;
 
-        // Use the customer's real phone number from the lead
         const customerPhone = (lead as any)?.customerPhone || (lead as any)?.customerMobile;
 
         if (!customerPhone) {
@@ -102,40 +101,33 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
             return;
         }
 
-        // Dealer details from profile
+        // Dealer details
         const dealerBusiness = dealerProfile?.businessName || dealerProfile?.businessname || 'Authorized Dealer';
-        const dealerOwner   = dealerProfile?.ownerName   || dealerProfile?.ownername   || dealerBusiness;
-        const dealerCity    = dealerProfile?.city        || dealerProfile?.location     || 'your city';
-        const dealerPhone   = dealerProfile?.phoneNumber || dealerProfile?.mobile       || '';
-        const dealerStreet  = dealerProfile?.street      || '';
+        const dealerPhone    = dealerProfile?.phoneNumber  || dealerProfile?.mobile       || '';
 
-        // Tyre details the customer selected on the web
-        const tyreBrand  = (lead as any)?.tyreBrand  || (lead as any)?.tyreInfo?.brand || 'the tyre';
-        const tyreSize   = (lead as any)?.tyreSize   || (lead as any)?.tyreInfo?.size  || '';
-        const tyreType   = (lead as any)?.tyreType   || '';
-        const tyreLabel  = [
-            tyreBrand,
-            tyreSize,
-            tyreType ? `(${tyreType.charAt(0).toUpperCase() + tyreType.slice(1).toLowerCase()})` : ''
-        ].filter(Boolean).join(' ');
+        // Tyre details
+        const tyreBrand = (lead as any)?.tyreBrand || (lead as any)?.tyreInfo?.brand || 'the tyre';
+        const tyreSize  = (lead as any)?.tyreSize  || (lead as any)?.tyreInfo?.size  || '';
 
         const message =
-            `Hi 👋\n\n` +
-            `Thank you for showing your interest in *${tyreLabel}* on Tyre Bazaar!\n\n` +
-            `I'm *${dealerOwner}* from *${dealerBusiness}*${dealerStreet ? `, ${dealerStreet}` : ''}, ${dealerCity}.\n\n` +
-            `We have the tyre you're looking for and would love to assist you. ` +
-            `Please let us know a convenient time to visit or call us at 📞 ${dealerPhone}.\n\n` +
-            `Looking forward to serving you! 🙏`;
+            `Hi! I'm from *${dealerBusiness}* on Online Tyre Bazaar.\n` +
+            `You enquired about *${tyreBrand}${tyreSize ? ' ' + tyreSize : ''}*.\n` +
+            `We have it available. Call us: ${dealerPhone}. When can you visit?`;
 
         const cleanPhone  = customerPhone.replace(/\D/g, '');
         const countryCode = cleanPhone.startsWith('91') ? '' : '91';
         const whatsappUrl = `https://wa.me/${countryCode}${cleanPhone}?text=${encodeURIComponent(message)}`;
 
-        try {
-            await Linking.openURL(whatsappUrl);
-        } catch {
+        Linking.canOpenURL(whatsappUrl).then(supported => {
+            if (supported) {
+                Linking.openURL(whatsappUrl);
+            } else {
+                // Fallback: open WhatsApp directly to the number without the message
+                Linking.openURL(`https://wa.me/${countryCode}${cleanPhone}`);
+            }
+        }).catch(() => {
             Alert.alert('Error', 'Could not open WhatsApp. Make sure it is installed.');
-        }
+        });
     };
 
 

@@ -5,8 +5,14 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { Wallet, CreditCard, History, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
-import { getWalletData, getPackages, rechargeWallet } from '../services/api';
+import { getWalletData, getPackages, initiateRecharge, completeRecharge } from '../services/api';
 
+let RazorpayCheckout: any = null;
+try {
+    RazorpayCheckout = require('react-native-razorpay').default;
+} catch (e) {
+    console.warn("Razorpay native module not found. Payment will not work in standard Expo Go.");
+}
 const PACKAGES = [
     { id: '1', name: 'Starter', price: '₹ 500', credits: '10 Leads' },
     { id: '2', name: 'Growth', price: '₹ 2,000', credits: '50 Leads', popular: true },
@@ -33,16 +39,15 @@ export default function WalletScreen() {
 
     const loadWallet = async () => {
         try {
-            const [walletData, packagesData]: [any, any] = await Promise.all([
+            const [walletDataResponse, packagesData]: [any, any] = await Promise.all([
                 getWalletData(),
                 getPackages()
             ]);
 
-            // Map API response to UI expected structure
             setWalletData({
-                balance: walletData.totalCredits || 0,
+                balance: walletDataResponse.totalCredits || 0,
                 packages: packagesData || PACKAGES,
-                history: walletData.transactions || []
+                history: walletDataResponse.transactions || []
             });
         } catch (error) {
             console.log('Failed to load wallet data', error);
@@ -51,44 +56,60 @@ export default function WalletScreen() {
         }
     };
 
-    const [addingCredits, setAddingCredits] = useState(false);
-
-    // Quick top-up amounts (in credits) — maps to a fake packageId the backend ignores
-    const QUICK_AMOUNTS = [
-        { label: '100 Credits', packageId: 'quick-100' },
-        { label: '500 Credits', packageId: 'quick-500' },
-        { label: '1000 Credits', packageId: 'quick-1000' },
-    ];
-
-    const handleQuickAdd = async (packageId: string, label: string) => {
-        setAddingCredits(true);
-        try {
-            await rechargeWallet(packageId);
-            Alert.alert('✅ Credits Added', `${label} added to your wallet!`);
-            loadWallet();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to add credits. Make sure the backend is running.');
-        } finally {
-            setAddingCredits(false);
-        }
-    };
-
     const handleBuyPackage = async (pkgId: string, pkgName: string) => {
         Alert.alert(
             'Add Credits',
-            `Add credits from the "${pkgName}" package?`,
+            `Buy the "${pkgName}" package?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Add Credits',
+                    text: 'Pay Now',
                     onPress: async () => {
                         setLoading(true);
                         try {
-                            await rechargeWallet(pkgId);
-                            Alert.alert('✅ Success', 'Credits added to your wallet!');
-                            loadWallet();
-                        } catch {
-                            Alert.alert('Error', 'Failed to add credits.');
+                            if (!RazorpayCheckout) {
+                                Alert.alert('Unsupported', 'Razorpay is not supported in this Expo Go environment. Please run a development build (npx expo run:android or run:ios).');
+                                setLoading(false);
+                                return;
+                            }
+
+                            // 1. Get Razorpay Order ID from backend
+                            const orderRes: any = await initiateRecharge(pkgId);
+                            
+                            // 2. Open Razorpay UI
+                            const options = {
+                                description: `Wallet Recharge: ${pkgName}`,
+                                currency: orderRes.currency,
+                                key: orderRes.keyId,
+                                amount: orderRes.amountInPaise,
+                                name: 'Online Tyre Bazaar',
+                                order_id: orderRes.gatewayOrderId,
+                                theme: { color: COLORS.teal.main }
+                            };
+
+                            RazorpayCheckout.open(options).then(async (data: any) => {
+                                // 3. Verify Payment Signature Backend
+                                try {
+                                    await completeRecharge({
+                                        gatewayOrderId: data.razorpay_order_id,
+                                        gatewayPaymentId: data.razorpay_payment_id,
+                                        gatewaySignature: data.razorpay_signature,
+                                        packageId: pkgId
+                                    });
+                                    Alert.alert('✅ Success', 'Credits added to your wallet!');
+                                    loadWallet();
+                                } catch (err) {
+                                    Alert.alert('Verification Failed', 'Payment succeeded but credit update failed. Please contact support.');
+                                }
+                            }).catch((error: any) => {
+                                // Payment cancelled or failed
+                                Alert.alert('Payment Failed', `Code: ${error.code} | Description: ${error.description}`);
+                            }).finally(() => {
+                                setLoading(false);
+                            });
+
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to initiate payment.');
                             setLoading(false);
                         }
                     }
@@ -114,28 +135,27 @@ export default function WalletScreen() {
             {/* Balance Card */}
             <View style={styles.balanceCard}>
                 <View>
-                <Text style={styles.balanceLabel}>Current Credits</Text>
-                <Text style={styles.balanceAmount}>{walletData?.balance ?? '—'}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 4 }}>
-                    Each lead costs 50 credits
-                </Text>
+                    <Text style={styles.balanceLabel}>Current Credits</Text>
+                    <Text style={styles.balanceAmount}>{walletData?.balance ?? '—'}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 4 }}>
+                        Each lead costs 50 credits
+                    </Text>
+                </View>
+                <View style={{ gap: 8, zIndex: 1 }}>
+                    {walletData?.packages?.slice(0, 3).map((pkg: any) => (
+                        <TouchableOpacity
+                            key={pkg.id}
+                            style={styles.addMoneyButton}
+                            onPress={() => handleBuyPackage(pkg.id, pkg.name)}
+                            disabled={loading}
+                        >
+                            <Plus size={12} color={COLORS.teal.dark} />
+                            <Text style={styles.addMoneyText}>{pkg.name} ({pkg.price})</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                <Wallet size={80} color="rgba(255,255,255,0.08)" style={styles.bgIcon} />
             </View>
-            <View style={{ gap: 8, zIndex: 1 }}>
-                {QUICK_AMOUNTS.map(q => (
-                    <TouchableOpacity
-                        key={q.packageId}
-                        style={styles.addMoneyButton}
-                        onPress={() => handleQuickAdd(q.packageId, q.label)}
-                        disabled={addingCredits}
-                    >
-                        <Plus size={12} color={COLORS.teal.dark} />
-                        <Text style={styles.addMoneyText}>{q.label}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-            <Wallet size={80} color="rgba(255,255,255,0.08)" style={styles.bgIcon} />
-            </View>
-
             {/* Packages Section */}
             <Text style={styles.sectionTitle}>Buy Credits</Text>
             <View style={styles.packagesGrid}>

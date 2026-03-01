@@ -12,7 +12,7 @@ type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 };
 
-const BASE_URL = 'http://192.168.1.2:8081';
+const BASE_URL = 'http://192.168.1.9:8081';
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
     const [identifier, setIdentifier] = useState('');
