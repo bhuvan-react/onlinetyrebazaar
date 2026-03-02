@@ -53,7 +53,24 @@ public interface LeadJpaRepository extends JpaRepository<LeadJpaEntity, UUID>, J
                         @Param("dealerId") UUID dealerId,
                         Pageable pageable);
 
-        // Returns a paginated list of leads bought by a particular dealer
-        @Query("SELECT l FROM LeadJpaEntity l JOIN LeadPurchaseJpaEntity lp ON l.id = lp.leadId WHERE lp.dealerId = :dealerId")
+        // Returns a paginated list of leads bought by a particular dealer (Follow-up
+        // tab)
+        @Query(value = "SELECT l FROM LeadJpaEntity l WHERE EXISTS " +
+                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId) " +
+                        "AND l.status NOT IN ('CONVERTED', 'NOT_CONVERTED', 'CLOSED', 'REJECTED')", countQuery = "SELECT COUNT(l) FROM LeadJpaEntity l WHERE EXISTS "
+                                        +
+                                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId) "
+                                        +
+                                        "AND l.status NOT IN ('CONVERTED', 'NOT_CONVERTED', 'CLOSED', 'REJECTED')")
         Page<LeadJpaEntity> findPurchasedLeadsByDealerId(@Param("dealerId") UUID dealerId, Pageable pageable);
+
+        // Returns leads converted by this dealer (Converted tab)
+        @Query(value = "SELECT l FROM LeadJpaEntity l WHERE EXISTS " +
+                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId) " +
+                        "AND l.status = 'CONVERTED'", countQuery = "SELECT COUNT(l) FROM LeadJpaEntity l WHERE EXISTS "
+                                        +
+                                        "(SELECT 1 FROM LeadPurchaseJpaEntity lp WHERE lp.leadId = l.id AND lp.dealerId = :dealerId) "
+                                        +
+                                        "AND l.status = 'CONVERTED'")
+        Page<LeadJpaEntity> findConvertedLeadsByDealerId(@Param("dealerId") UUID dealerId, Pageable pageable);
 }

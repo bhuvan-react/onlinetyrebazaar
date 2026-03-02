@@ -153,10 +153,18 @@ public class LeadDiscoveryService {
                 .map(this::mapToResponse);
     }
 
-    public Page<LeadDetailsResponse> getUnlockedLeads(UUID dealerId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return leadRepository.findLeadsBySelectedDealer(dealerId, pageable)
-                .map(lead -> mapToResponse(lead, dealerId));
+    public Page<LeadDetailsResponse> getUnlockedLeads(UUID dealerId, String filter, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Lead> leads;
+        if ("CONVERTED".equalsIgnoreCase(filter)) {
+            leads = leadRepository.findConvertedLeadsBySelectedDealer(dealerId, pageable);
+        } else {
+            // Default: Follow-up tab (purchased leads excluding terminal statuses)
+            leads = leadRepository.findLeadsBySelectedDealer(dealerId, pageable);
+        }
+
+        return leads.map(lead -> mapToResponse(lead, dealerId));
     }
 
     @Transactional

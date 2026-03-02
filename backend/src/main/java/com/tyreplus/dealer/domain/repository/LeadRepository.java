@@ -1,13 +1,9 @@
 package com.tyreplus.dealer.domain.repository;
 
-import com.tyreplus.dealer.application.dto.LeadDetailsResponse;
 import com.tyreplus.dealer.domain.entity.Lead;
 import com.tyreplus.dealer.domain.entity.LeadStatus;
-import com.tyreplus.dealer.infrastructure.persistence.entity.LeadJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,4 +49,6 @@ public interface LeadRepository {
     Page<Lead> findLeadsWithFilters(LeadStatus status, UUID dealerId, Pageable pageable);
 
     Page<Lead> findLeadsBySelectedDealer(UUID dealerId, Pageable pageable);
+
+    Page<Lead> findConvertedLeadsBySelectedDealer(UUID dealerId, Pageable pageable);
 }

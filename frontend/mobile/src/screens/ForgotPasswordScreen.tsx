@@ -7,12 +7,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { COLORS } from '../constants/theme';
 import { ArrowLeft, Mail, CheckCircle } from 'lucide-react-native';
+import { API_BASE_URL } from '../services/api';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 };
-
-const BASE_URL = 'http://192.168.1.9:8081';
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
     const [identifier, setIdentifier] = useState('');
@@ -28,7 +27,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
         setLoading(true);
         try {
-            await fetch(`${BASE_URL}/api/v1/auth/dealer/forgot-password`, {
+            await fetch(`${API_BASE_URL}/api/v1/auth/dealer/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ identifier: val }),

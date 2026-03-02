@@ -10,10 +10,10 @@ const getBaseUrl = () => {
     
     // Default fallback for development
     // Using LAN IP 192.168.1.9 for physical iPhone/Android devices
-    return 'http://192.168.1.9:8081';
+    return 'http://192.168.1.2:8081';
 };
 
-const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getBaseUrl();
 
 // Generic Fetch Wrapper
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -224,8 +224,12 @@ export const getLeadOffers = async (leadId: string) => {
     return apiFetch(`/api/v1/leads/${leadId}/offers`);
 };
 
-export const getUnlockedLeads = async (page = 0, size = 10) => {
-    return apiFetch(`/api/v1/leads/unlocked?page=${page}&size=${size}`);
+export const getUnlockedLeads = async (filter?: string, page = 0, size = 10) => {
+    const query = new URLSearchParams();
+    if (filter) query.append('filter', filter);
+    query.append('page', page.toString());
+    query.append('size', size.toString());
+    return apiFetch(`/api/v1/leads/unlocked?${query.toString()}`);
 };
 
 export const getLeadDetails = async (leadId: string) => {
@@ -250,6 +254,10 @@ export const skipLead = async (leadId: string) => {
 
 export const markLeadAsConverted = async (leadId: string) => {
     return apiFetch(`/api/v1/leads/${leadId}/replace-tyre`, { method: 'PUT' });
+};
+
+export const markLeadAsNotSold = async (leadId: string) => {
+    return apiFetch(`/api/v1/leads/${leadId}/not-sold`, { method: 'PUT' });
 };
 
 // --- Wallet ---

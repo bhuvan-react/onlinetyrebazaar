@@ -15,8 +15,8 @@ const PACKAGES = [
 
 const HISTORY = [
     { id: '1', title: 'Added Money', date: 'Today, 10:00 AM', amount: '+ ₹ 2,000', type: 'credit' },
-    { id: '2', title: 'Lead Purchase', date: 'Yesterday', amount: '- ₹ 50', type: 'debit' },
-    { id: '3', title: 'Lead Purchase', date: '25 Dec', amount: '- ₹ 50', type: 'debit' },
+    { id: '2', title: 'Lead Purchase', date: 'Yesterday', amount: '- 30 Credits', type: 'debit' },
+    { id: '3', title: 'Lead Purchase', date: '25 Dec', amount: '- 30 Credits', type: 'debit' },
     { id: '4', title: 'Added Money', date: '20 Dec', amount: '+ ₹ 500', type: 'credit' },
 ];
 
@@ -101,7 +101,7 @@ export default function WalletScreen() {
                     <Text style={styles.balanceLabel}>Current Credits</Text>
                     <Text style={styles.balanceAmount}>{walletData?.balance ?? '—'}</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 4 }}>
-                        Each lead costs 50 credits
+                        Each lead costs 30 credits
                     </Text>
                 </View>
                 <View style={{ gap: 8, zIndex: 1 }}>

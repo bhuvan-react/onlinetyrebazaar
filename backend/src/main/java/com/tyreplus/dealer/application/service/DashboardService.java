@@ -49,7 +49,8 @@ public class DashboardService {
         // 3. Calculate Conversion Rate
         // Definition: (Converted Leads / Total Leads Purchased by this Dealer)
         long totalPurchased = leadRepository.countBySelectedDealerId(dealerId);
-        long convertedCount = leadRepository.countBySelectedDealerIdAndStatus(dealerId, LeadStatus.CLOSED);
+        long convertedCount = leadRepository.countBySelectedDealerIdAndStatus(dealerId, LeadStatus.CONVERTED)
+                + leadRepository.countBySelectedDealerIdAndStatus(dealerId, LeadStatus.CLOSED);
 
         int conversionRate = totalPurchased > 0
                 ? (int) ((convertedCount * 100) / totalPurchased)

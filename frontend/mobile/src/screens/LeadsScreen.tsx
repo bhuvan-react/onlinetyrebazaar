@@ -43,7 +43,9 @@ export default function LeadsScreen() {
         try {
             let data;
             if (activeFilter === 'Follow-up') {
-                data = await getUnlockedLeads();
+                data = await getUnlockedLeads('Follow-up');
+            } else if (activeFilter === 'Converted') {
+                data = await getUnlockedLeads('CONVERTED');
             } else {
                 data = await getLeads(activeFilter, sortBy);
             }

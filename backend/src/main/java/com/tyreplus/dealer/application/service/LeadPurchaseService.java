@@ -23,7 +23,7 @@ import java.util.UUID;
 @Service
 public class LeadPurchaseService {
 
-    private static final int LEAD_COST_CREDITS = 50;
+    public static final int LEAD_COST_CREDITS = 30;
 
     private final LeadRepository leadRepository;
     private final WalletRepository walletRepository;

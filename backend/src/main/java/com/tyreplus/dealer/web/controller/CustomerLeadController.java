@@ -83,7 +83,7 @@ public class CustomerLeadController {
 
         // The cost should ideally come from configuration or the offer itself.
         // Assuming a fixed cost of 100 for now, as per typical OTB models.
-        int leadCost = 100;
+        int leadCost = com.tyreplus.dealer.application.service.LeadPurchaseService.LEAD_COST_CREDITS;
 
         return ResponseEntity.ok(purchaseService.processCustomerSelection(leadId, dealerId, leadCost));
     }

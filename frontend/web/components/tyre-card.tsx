@@ -10,7 +10,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import { ImageViewer } from "./image-viewer"
 import { OtpModal } from "./otp-modal"
 import { useAppSelector, useAppDispatch } from "@/lib/hooks"
-import { setLeadId, resetSearch } from "@/lib/store"
+import { setLeadId } from "@/lib/store"
 import { leadService } from "@/lib/services/lead-service"
 
 interface TyreCardProps {
@@ -106,14 +106,18 @@ export function TyreCard({ tyre, isSelected, onSelect }: TyreCardProps) {
     }
 
     try {
-      // Clear any prior lead first so this becomes a fresh lead
-      dispatch(resetSearch())
-      const response = await leadService.createLead(payload)
-      if (response.data?.id) {
-        dispatch(setLeadId(response.data.id))
+      if (searchState.leadId) {
+        // Update existing lead instead of creating a new one
+        await leadService.selectTyreForLead(searchState.leadId, tyre.id, variant === "new" ? "NEW" : "USED")
+      } else {
+        const response = await leadService.createLead(payload)
+        if (response.data?.id) {
+          dispatch(setLeadId(response.data.id))
+        }
       }
       router.push(`/quote?tyreId=${tyre.id}&variant=${variant}`)
-    } catch {
+    } catch (error) {
+      console.error("Lead submission error:", error)
       // If something went wrong, still navigate — the quote page shows confirmation
       router.push(`/quote?tyreId=${tyre.id}&variant=${variant}`)
     } finally {

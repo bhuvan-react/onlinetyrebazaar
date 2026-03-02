@@ -136,4 +136,9 @@ public class LeadRepositoryAdapter implements LeadRepository {
     public Page<Lead> findLeadsBySelectedDealer(UUID dealerId, Pageable pageable) {
         return jpaRepository.findPurchasedLeadsByDealerId(dealerId, pageable).map(mapper::toDomainEntity);
     }
+
+    @Override
+    public Page<Lead> findConvertedLeadsBySelectedDealer(UUID dealerId, Pageable pageable) {
+        return jpaRepository.findConvertedLeadsByDealerId(dealerId, pageable).map(mapper::toDomainEntity);
+    }
 }

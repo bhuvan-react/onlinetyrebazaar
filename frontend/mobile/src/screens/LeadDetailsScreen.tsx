@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Modal } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Lead } from '../types';
 import { COLORS } from '../constants/theme';
-import { Phone, MapPin, User, Car, Wrench, ArrowLeft, CheckCircle, XCircle, MessageSquare, Check } from 'lucide-react-native';
+import { Phone, MapPin, User, Car, Wrench, ArrowLeft, CheckCircle, XCircle, MessageSquare, Check, Lock, ChevronDown } from 'lucide-react-native';
 import LeadQuestionnaireSummary from '../components/LeadQuestionnaireSummary';
 
-import { getLeadDetails, submitOffer, skipLead, getProfile, markLeadAsConverted, buyLead } from '../services/api';
+import { getLeadDetails, submitOffer, skipLead, getProfile, markLeadAsConverted, buyLead, markLeadAsNotSold } from '../services/api';
 import { ActivityIndicator } from 'react-native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeadDetails'>;
@@ -17,8 +17,10 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
 
     const [lead, setLead] = useState<Lead | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isLoading, setIsLoading] = useState(false); // For action buttons
+    const [isLoading, setIsLoading] = useState(false);
     const [dealerProfile, setDealerProfile] = useState<any>(null);
+    const [whatsappClicked, setWhatsappClicked] = useState(false);
+    const [showUpdateModal, setShowUpdateModal] = useState(false);
 
     useEffect(() => {
         loadDealerProfile();
@@ -68,8 +70,23 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
         setIsLoading(true);
         try {
             await markLeadAsConverted(leadId);
-            Alert.alert('Success', 'Lead marked as converted!');
-            loadLeadDetails(); // Refresh
+            setShowUpdateModal(false);
+            Alert.alert('Success', 'Lead marked as Delivery in Progress (Converted)!');
+            navigation.goBack(); 
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update lead status');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMarkAsNotSold = async () => {
+        setIsLoading(true);
+        try {
+            await markLeadAsNotSold(leadId);
+            setShowUpdateModal(false);
+            // Alert.alert('Status Updated', 'Lead marked as Not Sold.'); // Optional, since it disappears
+            navigation.goBack();
         } catch (error) {
             Alert.alert('Error', 'Failed to update lead status');
         } finally {
@@ -119,6 +136,7 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
         const whatsappUrl = `https://wa.me/${countryCode}${cleanPhone}?text=${encodeURIComponent(message)}`;
 
         Linking.canOpenURL(whatsappUrl).then(supported => {
+            setWhatsappClicked(true); // Enable the update button
             if (supported) {
                 Linking.openURL(whatsappUrl);
             } else {
@@ -135,11 +153,11 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
         console.log('check')
         Alert.alert(
             'Buy Lead',
-            'This will deduct ₹50 credits from your wallet. The lead will appear in your Follow-up tab.',
+            'This will deduct 30 credits from your wallet. The lead will appear in your Follow-up tab.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Buy Lead (₹50)',
+                    text: 'Buy Lead (30 Credits)',
                     onPress: async () => {
                         setIsLoading(true);
                         try {
@@ -326,52 +344,14 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
             {/* Bottom Actions based on Status */}
             <View style={styles.footer}>
 
-                {/* FRESH / VERIFIED — show Connect if purchased, otherwise Buy+Skip */}
-                {(lead.status === 'VERIFIED' || lead.status === 'NEW') && (
-                    (lead as any).customerMobile ? (
-                        /* Already purchased — show Connect via WhatsApp */
-                        <TouchableOpacity
-                            style={[styles.footerButton, { backgroundColor: '#25D366', borderColor: '#25D366' }]}
-                            onPress={handleWhatsApp}
-                        >
-                            <MessageSquare size={20} color={COLORS.white} />
-                            <Text style={styles.buyButtonText}>Connect via WhatsApp</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        /* Not yet purchased — Buy + Skip */
-                        <>
-                            <TouchableOpacity
-                                style={[styles.footerButton, styles.buyButton]}
-                                onPress={handleBuyLead}
-                                disabled={isLoading}
-                            >
-                                {isLoading
-                                    ? <ActivityIndicator color={COLORS.white} />
-                                    : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (₹50)</Text></>}
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.footerButton, styles.skipButton]} onPress={handleSkip} disabled={isLoading}>
-                                <XCircle size={20} color={COLORS.gray[700]} />
-                                <Text style={styles.skipButtonText}>Skip</Text>
-                            </TouchableOpacity>
-                        </>
-                    )
-                )}
-
-                {/* SKIPPED — Buy from Skipped tab */}
-                {lead.status === 'SKIPPED' && (
-                    <TouchableOpacity
-                        style={[styles.footerButton, styles.buyButton]}
-                        onPress={handleBuyLead}
-                        disabled={isLoading}
-                    >
-                        {isLoading
-                            ? <ActivityIndicator color={COLORS.white} />
-                            : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (₹50)</Text></>}
-                    </TouchableOpacity>
-                )}
-
-                {/* FOLLOW-UP — WhatsApp customer (primary) + Tyre Replaced (secondary) */}
-                {(lead.status === 'FOLLOW_UP' || lead.status === 'DEALER_SELECTED' || lead.status === 'OFFER_RECEIVED') && (
+                {/* CASE 1: LEAD CONVERTED */}
+                {lead.status === 'CONVERTED' ? (
+                    <View style={[styles.footerButton, { backgroundColor: COLORS.gray[100], borderColor: COLORS.gray[200] }]}>
+                        <CheckCircle size={20} color={COLORS.teal.main} />
+                        <Text style={[styles.buyButtonText, { color: COLORS.teal.main }]}>Lead Converted ✓</Text>
+                    </View>
+                ) : (lead as any).customerMobile ? (
+                    /* CASE 2: LEAD PURCHASED (revealed contact) — show WhatsApp + Update Status */
                     <View style={{ flex: 1, gap: 10 }}>
                         {/* Primary: WhatsApp customer */}
                         <TouchableOpacity
@@ -379,37 +359,132 @@ export default function LeadDetailsScreen({ navigation, route }: Props) {
                             onPress={handleWhatsApp}
                         >
                             <MessageSquare size={20} color={COLORS.white} />
-                            <Text style={styles.buyButtonText}>💬 WhatsApp Customer</Text>
+                            <Text style={styles.buyButtonText}>Connect via WhatsApp</Text>
                         </TouchableOpacity>
-                        {/* Secondary: Tyre Replaced */}
+                        
+                        {/* Secondary: Update Lead Status */}
                         <TouchableOpacity
-                            style={[styles.footerButton, { backgroundColor: '#22C55E', borderColor: '#22C55E', flex: 0 }]}
-                            onPress={handleMarkAsConverted}
+                            style={[
+                                styles.footerButton, 
+                                { 
+                                    backgroundColor: whatsappClicked ? COLORS.teal.main : COLORS.gray[50], 
+                                    borderColor: whatsappClicked ? COLORS.teal.main : COLORS.gray[200], 
+                                    flex: 0 
+                                }
+                            ]}
+                            onPress={() => setShowUpdateModal(true)}
+                            disabled={!whatsappClicked || isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color={COLORS.white} />
+                            ) : (
+                                <>
+                                    {whatsappClicked ? (
+                                        <CheckCircle size={20} color={COLORS.white} />
+                                    ) : (
+                                        <Lock size={18} color={COLORS.gray[400]} />
+                                    )}
+                                    <Text style={[
+                                        styles.buyButtonText, 
+                                        { color: whatsappClicked ? COLORS.white : COLORS.gray[400] }
+                                    ]}>
+                                        Update Lead Status
+                                    </Text>
+                                    {!whatsappClicked && <View style={styles.disabledOverlay} />}
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                ) : lead.status === 'SKIPPED' ? (
+                    /* CASE 3: SKIPPED — Buy from Skipped tab */
+                    <TouchableOpacity
+                        style={[styles.footerButton, styles.buyButton]}
+                        onPress={handleBuyLead}
+                        disabled={isLoading}
+                    >
+                        {isLoading
+                            ? <ActivityIndicator color={COLORS.white} />
+                            : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (1 Credit)</Text></>}
+                    </TouchableOpacity>
+                ) : (lead.status === 'VERIFIED' || lead.status === 'NEW' || lead.status === 'OFFER_RECEIVED') ? (
+                    /* CASE 4: NOT PURCHASED — Buy + Skip */
+                    <>
+                        <TouchableOpacity
+                            style={[styles.footerButton, styles.buyButton]}
+                            onPress={handleBuyLead}
                             disabled={isLoading}
                         >
                             {isLoading
                                 ? <ActivityIndicator color={COLORS.white} />
-                                : <><Check size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>✅ Tyre Replaced</Text></>}
+                                : <><CheckCircle size={20} color={COLORS.white} /><Text style={styles.buyButtonText}>Buy Lead (30 Credits)</Text></>}
                         </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* BOUGHT (legacy compat) — same as FOLLOW_UP  */}
-                {lead.status === 'BOUGHT' && (
-                    <TouchableOpacity style={[styles.footerButton, { backgroundColor: '#25D366', borderColor: '#25D366' }]} onPress={handleWhatsApp}>
-                        <Text style={styles.buyButtonText}>Chat on WhatsApp</Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* CONVERTED — done state */}
-                {lead.status === 'CONVERTED' && (
-                    <View style={[styles.footerButton, { backgroundColor: COLORS.gray[100], borderColor: COLORS.gray[200] }]}>
-                        <CheckCircle size={20} color={COLORS.teal.main} />
-                        <Text style={[styles.buyButtonText, { color: COLORS.teal.main }]}>Lead Converted ✓</Text>
-                    </View>
-                )}
+                        <TouchableOpacity style={[styles.footerButton, styles.skipButton]} onPress={handleSkip} disabled={isLoading}>
+                            <XCircle size={20} color={COLORS.gray[700]} />
+                            <Text style={styles.skipButtonText}>Skip</Text>
+                        </TouchableOpacity>
+                    </>
+                ) : null}
 
             </View>
+
+            {/* Status Update Modal */}
+            <Modal
+                visible={showUpdateModal}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowUpdateModal(false)}
+            >
+                <TouchableOpacity 
+                    style={styles.modalOverlay} 
+                    activeOpacity={1} 
+                    onPress={() => setShowUpdateModal(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalIndicator} />
+                        <Text style={styles.modalTitle}>Update Lead Status</Text>
+                        <Text style={styles.modalSubtitle}>Please select the current status of this lead</Text>
+                        
+                        <View style={styles.optionsList}>
+                            <TouchableOpacity 
+                                style={styles.optionItem}
+                                onPress={handleMarkAsConverted}
+                            >
+                                <View style={[styles.iconContainer, { backgroundColor: '#DCFCE7' }]}>
+                                    <CheckCircle size={20} color="#22C55E" />
+                                </View>
+                                <View style={styles.optionTextContainer}>
+                                    <Text style={styles.optionLabel}>Delivery in progress</Text>
+                                    <Text style={styles.optionDesc}>Customer has confirmed the purchase</Text>
+                                </View>
+                                <ChevronDown size={20} color={COLORS.gray[300]} style={{ transform: [{ rotate: '-90deg' }] }} />
+                            </TouchableOpacity>
+
+                            <View style={styles.optionDivider} />
+
+                            <TouchableOpacity 
+                                style={styles.optionItem}
+                                onPress={handleMarkAsNotSold}
+                            >
+                                <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
+                                    <XCircle size={20} color="#EF4444" />
+                                </View>
+                                <View style={styles.optionTextContainer}>
+                                    <Text style={styles.optionLabel}>Not sold</Text>
+                                    <Text style={styles.optionDesc}>Customer was not interested or lead failed</Text>
+                                </View>
+                                <ChevronDown size={20} color={COLORS.gray[300]} style={{ transform: [{ rotate: '-90deg' }] }} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity 
+                            style={styles.cancelButton}
+                            onPress={() => setShowUpdateModal(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
@@ -563,4 +638,95 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 16,
     },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: COLORS.white,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+        alignItems: 'center',
+    },
+    modalIndicator: {
+        width: 40,
+        height: 4,
+        backgroundColor: COLORS.gray[200],
+        borderRadius: 2,
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: COLORS.black,
+        marginBottom: 8,
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: COLORS.gray[500],
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    optionsList: {
+        width: '100%',
+        backgroundColor: COLORS.gray[50],
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: COLORS.gray[200],
+        marginBottom: 24,
+    },
+    optionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        gap: 12,
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    optionTextContainer: {
+        flex: 1,
+    },
+    optionLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.black,
+    },
+    optionDesc: {
+        fontSize: 12,
+        color: COLORS.gray[500],
+        marginTop: 2,
+    },
+    optionDivider: {
+        height: 1,
+        backgroundColor: COLORS.gray[200],
+        marginHorizontal: 16,
+    },
+    cancelButton: {
+        width: '100%',
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        backgroundColor: COLORS.gray[100],
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.gray[700],
+    },
+    disabledOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 8,
+    },
 });
+

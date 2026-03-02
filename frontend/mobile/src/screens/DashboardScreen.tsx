@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { Wallet, TrendingUp, Users } from 'lucide-react-native';
@@ -13,9 +13,11 @@ export default function DashboardScreen() {
     const [data, setData] = React.useState<any>(null);
     const [loading, setLoading] = React.useState(true);
 
-    React.useEffect(() => {
-        loadDashboard();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            loadDashboard();
+        }, [])
+    );
 
     const loadDashboard = async () => {
         try {
@@ -50,7 +52,7 @@ export default function DashboardScreen() {
             <View style={styles.walletCard}>
                 <View>
                     <Text style={styles.walletLabel}>Wallet Balance</Text>
-                    <Text style={styles.walletAmount}>₹ {data?.walletBalance}</Text>
+                    <Text style={styles.walletAmount}>{data?.walletBalance ?? 0} Credits</Text>
                 </View>
                 <TouchableOpacity style={styles.addMoneyButton} onPress={() => navigation.navigate('MainTabs', { screen: 'Wallet' })}>
                     <Text style={styles.addMoneyText}>+ Add Money</Text>

@@ -50,13 +50,14 @@ public class LeadController {
         return ResponseEntity.ok(discoveryService.getLeads(dealer.getId(), filter, sort, page, size));
     }
 
-    @Operation(summary = "Get Unlocked Leads", description = "Retrieves leads where the dealer has been selected and paid.")
+    @Operation(summary = "Get Unlocked Leads", description = "Retrieves leads where the dealer has been selected and paid. Filter can be 'Follow-up' or 'CONVERTED'.")
     @GetMapping("/unlocked")
     public ResponseEntity<Page<LeadDetailsResponse>> getUnlockedLeads(
             @AuthenticationPrincipal DealerDetails dealer,
+            @RequestParam(defaultValue = "Follow-up") String filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(discoveryService.getUnlockedLeads(dealer.getId(), page, size));
+        return ResponseEntity.ok(discoveryService.getUnlockedLeads(dealer.getId(), filter, page, size));
     }
 
     @Operation(summary = "Get Lead Details", description = "Retrieves detailed information about a specific lead. Contact details will be unlocked if the dealer is selected.")
@@ -105,6 +106,14 @@ public class LeadController {
     public ResponseEntity<Void> replaceTyre(@PathVariable UUID leadId,
             @AuthenticationPrincipal DealerDetails dealer) {
         statusService.markAsConverted(leadId, dealer.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Mark Lead Not Sold", description = "Dealers use this to indicate the customer did not buy. Transitions lead to NOT_CONVERTED (hidden from follow-up).")
+    @PutMapping("/{leadId}/not-sold")
+    public ResponseEntity<Void> markNotSold(@PathVariable UUID leadId,
+            @AuthenticationPrincipal DealerDetails dealer) {
+        statusService.markAsNotConverted(leadId, dealer.getId());
         return ResponseEntity.ok().build();
     }
 }

@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+import com.tyreplus.dealer.application.exception.InsufficientFundsException;
+
 /**
  * Domain Entity representing a Wallet.
  * Pure domain model without JPA annotations.
@@ -43,7 +45,7 @@ public class Wallet {
         if (amount < 0)
             throw new IllegalArgumentException("Amount cannot be negative");
         if (!canAfford(amount))
-            throw new IllegalStateException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient funds");
 
         int usedBonus = 0;
         int usedPurchased = 0;

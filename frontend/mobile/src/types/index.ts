@@ -106,6 +106,6 @@ export interface Lead {
     createdAt?: string;
     status: 'NEW' | 'VERIFIED' | 'BOUGHT' | 'FOLLOW_UP' | 'CONVERTED' | 'NEW_LEAD' | 'NEW LEAD'
           | 'CONTACTED' | 'LOST' | 'DEALER_SELECTED' | 'VERIFIED' | 'OFFER_RECEIVED'
-          | 'SKIPPED' | 'CLOSED';
+          | 'SKIPPED' | 'CLOSED' | 'NOT_CONVERTED';
     questionnaire?: QuestionnaireItem[];
 }

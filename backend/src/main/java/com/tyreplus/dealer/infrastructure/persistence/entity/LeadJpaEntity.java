@@ -58,7 +58,6 @@ public class LeadJpaEntity {
     private String locationPincode;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private LeadStatus status;
 

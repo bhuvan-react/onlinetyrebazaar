@@ -27,7 +27,7 @@ public class RechargePackageSeeder implements CommandLineRunner {
         packageRepository.save(RechargePackage.builder()
                 .name("Starter")
                 .priceInInr(500)
-                .baseCredits(10)
+                .baseCredits(500)
                 .popular(false)
                 .active(true)
                 .build());
@@ -35,7 +35,7 @@ public class RechargePackageSeeder implements CommandLineRunner {
         packageRepository.save(RechargePackage.builder()
                 .name("Growth")
                 .priceInInr(2000)
-                .baseCredits(50)
+                .baseCredits(2000)
                 .popular(true)
                 .active(true)
                 .build());
@@ -43,7 +43,7 @@ public class RechargePackageSeeder implements CommandLineRunner {
         packageRepository.save(RechargePackage.builder()
                 .name("Premium")
                 .priceInInr(5000)
-                .baseCredits(150)
+                .baseCredits(5000)
                 .popular(false)
                 .active(true)
                 .build());
@@ -51,4 +51,3 @@ public class RechargePackageSeeder implements CommandLineRunner {
         System.out.println("✅ Recharge packages seeded (dev profile)");
     }
 }
-
