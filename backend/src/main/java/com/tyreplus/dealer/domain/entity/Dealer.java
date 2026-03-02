@@ -24,6 +24,7 @@ public class Dealer {
     private String ownerName;
     private boolean isVerified;
     private String passwordHash;
+    private String consentToken;
     private ContactDetails contactDetails;
     private Address address;
     private BusinessHours businessHours;
@@ -50,4 +51,3 @@ public class Dealer {
         this.businessHours = newBusinessHours;
     }
 }
-

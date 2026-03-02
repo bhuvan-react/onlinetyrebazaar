@@ -18,6 +18,7 @@ import com.tyreplus.dealer.infrastructure.persistence.entity.PasswordResetTokenE
 import com.tyreplus.dealer.infrastructure.persistence.repository.PasswordResetTokenRepository;
 import com.tyreplus.dealer.infrastructure.security.JwtUtil;
 import com.tyreplus.dealer.infrastructure.security.RefreshTokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
+    private final ConsentTokenService consentTokenService;
+    private final HttpServletRequest httpServletRequest;
 
     // Constructor updated to include WalletRepository and CustomerRepository
     public AuthService(DealerRepository dealerRepository,
@@ -55,7 +58,9 @@ public class AuthService {
             RefreshTokenService refreshTokenService,
             PasswordEncoder passwordEncoder,
             PasswordResetTokenRepository passwordResetTokenRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            ConsentTokenService consentTokenService,
+            HttpServletRequest httpServletRequest) {
         this.dealerRepository = dealerRepository;
         this.customerRepository = customerRepository;
         this.walletRepository = walletRepository;
@@ -65,6 +70,8 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
+        this.consentTokenService = consentTokenService;
+        this.httpServletRequest = httpServletRequest;
     }
 
     public String generateOtp(String mobile) {
@@ -211,6 +218,15 @@ public class AuthService {
                 .build();
 
         Dealer savedDealer = dealerRepository.save(dealer);
+
+        // 4b. Generate and store immutable consent token (two-save approach:
+        // UUID is only available after first save, token requires UUID)
+        String clientIp = httpServletRequest.getHeader("X-Forwarded-For");
+        if (clientIp == null)
+            clientIp = httpServletRequest.getRemoteAddr();
+        String consentToken = consentTokenService.generate(savedDealer.getId(), clientIp);
+        savedDealer.setConsentToken(consentToken);
+        dealerRepository.save(savedDealer);
 
         // 5. Initialize Wallet
         Wallet wallet = new Wallet(savedDealer.getId(), 0);

@@ -5,6 +5,7 @@ export type RootStackParamList = {
     ForgotPassword: undefined;
     RoadsideRegister: undefined;
     FullDealerRegister: undefined;
+    DealerTerms: undefined;
     MainTabs: NavigatorScreenParams<BottomTabParamList>;
     LeadDetails: { leadId: string };
     OfferSubmission: { leadId: string };

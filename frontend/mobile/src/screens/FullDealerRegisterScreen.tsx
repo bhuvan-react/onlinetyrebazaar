@@ -168,6 +168,7 @@ export default function FullDealerRegisterScreen({ navigation }: Props) {
                     // Java DayOfWeek enum values (MONDAY, TUESDAY, …)
                     openDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
                 },
+                termsAccepted: formData.termsAccepted, // must be true (validated by backend @AssertTrue)
             };
             await registerDealer(payload);
             setOtpModalVisible(false);
@@ -423,22 +424,30 @@ export default function FullDealerRegisterScreen({ navigation }: Props) {
                         <Text style={styles.uploadButtonText}>📄 Upload Shop License</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.termsContainer}
-                        onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}
-                    >
-                        <View
-                            style={[
-                                styles.checkbox,
-                                formData.termsAccepted && styles.checkboxChecked,
-                            ]}
+                    <View style={styles.termsContainer}>
+                        <TouchableOpacity
+                            onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}
                         >
-                            {formData.termsAccepted && <Text style={styles.checkboxIcon}>✓</Text>}
-                        </View>
+                            <View
+                                style={[
+                                    styles.checkbox,
+                                    formData.termsAccepted && styles.checkboxChecked,
+                                ]}
+                            >
+                                {formData.termsAccepted && <Text style={styles.checkboxIcon}>✓</Text>}
+                            </View>
+                        </TouchableOpacity>
                         <Text style={styles.termsText}>
-                            I accept the terms and conditions *
+                            I accept the{' '}
+                            <Text
+                                style={styles.termsLink}
+                                onPress={() => navigation.navigate('DealerTerms')}
+                            >
+                                Terms and Conditions
+                            </Text>
+                            {' '}*
                         </Text>
-                    </TouchableOpacity>
+                    </View>
                 </View>
             )}
 
@@ -693,6 +702,13 @@ const styles = StyleSheet.create({
     termsText: {
         fontSize: 14,
         color: COLORS.gray[700],
+        flex: 1,
+        marginLeft: 12,
+    },
+    termsLink: {
+        color: COLORS.teal.main,
+        textDecorationLine: 'underline',
+        fontWeight: '600',
     },
     benefitsBox: {
         backgroundColor: COLORS.teal.lighter,

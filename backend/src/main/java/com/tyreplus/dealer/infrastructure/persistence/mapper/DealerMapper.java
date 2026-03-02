@@ -27,7 +27,8 @@ public class DealerMapper {
                 .isVerified(dealer.isVerified())
                 .email(dealer.getContactDetails() != null ? dealer.getContactDetails().email() : null)
                 .phoneNumber(dealer.getContactDetails() != null ? dealer.getContactDetails().phoneNumber() : null)
-                .alternatePhoneNumber(dealer.getContactDetails() != null ? dealer.getContactDetails().alternatePhoneNumber() : null)
+                .alternatePhoneNumber(
+                        dealer.getContactDetails() != null ? dealer.getContactDetails().alternatePhoneNumber() : null)
                 .street(dealer.getAddress() != null ? dealer.getAddress().street() : null)
                 .city(dealer.getAddress() != null ? dealer.getAddress().city() : null)
                 .state(dealer.getAddress() != null ? dealer.getAddress().state() : null)
@@ -37,6 +38,7 @@ public class DealerMapper {
                 .closingTime(dealer.getBusinessHours() != null ? dealer.getBusinessHours().closingTime() : null)
                 .openDays(dealer.getBusinessHours() != null ? dealer.getBusinessHours().openDays() : Set.of())
                 .passwordHash(dealer.getPasswordHash())
+                .consentToken(dealer.getConsentToken())
                 .build();
     }
 
@@ -48,22 +50,19 @@ public class DealerMapper {
         ContactDetails contactDetails = new ContactDetails(
                 jpaEntity.getEmail(),
                 jpaEntity.getPhoneNumber(),
-                jpaEntity.getAlternatePhoneNumber()
-        );
+                jpaEntity.getAlternatePhoneNumber());
 
         Address address = new Address(
                 jpaEntity.getStreet(),
                 jpaEntity.getCity(),
                 jpaEntity.getState(),
                 jpaEntity.getZipCode(),
-                jpaEntity.getCountry()
-        );
+                jpaEntity.getCountry());
 
         BusinessHours businessHours = new BusinessHours(
                 jpaEntity.getOpeningTime(),
                 jpaEntity.getClosingTime(),
-                jpaEntity.getOpenDays()
-        );
+                jpaEntity.getOpenDays());
 
         return Dealer.builder()
                 .id(jpaEntity.getId())
@@ -71,10 +70,10 @@ public class DealerMapper {
                 .ownerName(jpaEntity.getOwnerName())
                 .isVerified(jpaEntity.isVerified())
                 .passwordHash(jpaEntity.getPasswordHash())
+                .consentToken(jpaEntity.getConsentToken())
                 .contactDetails(contactDetails)
                 .address(address)
                 .businessHours(businessHours)
                 .build();
     }
 }
-

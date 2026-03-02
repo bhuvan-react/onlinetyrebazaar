@@ -27,7 +27,9 @@ public record RegisterRequest(
 
                 @Valid @NotNull(message = "Address is required") AddressRequest address,
 
-                @Valid @NotNull(message = "Business hours are required") BusinessHoursRequest businessHours) {
+                @Valid @NotNull(message = "Business hours are required") BusinessHoursRequest businessHours,
+
+                @AssertTrue(message = "You must accept the terms and conditions to register") boolean termsAccepted) {
         public record AddressRequest(
                         String shopNumber,
                         @NotBlank(message = "Street is required") String street,

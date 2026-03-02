@@ -37,8 +37,16 @@ public class DealerJpaEntity {
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified;
 
-    @Column(name ="password_hash")
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    /**
+     * Immutable signed JWT capturing T&C acceptance at registration.
+     * updatable=false: Hibernate NEVER issues UPDATE for this column.
+     * nullable=true: allows migration without affecting existing dealers.
+     */
+    @Column(name = "consent_token", updatable = false, columnDefinition = "TEXT")
+    private String consentToken;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
@@ -71,12 +79,8 @@ public class DealerJpaEntity {
     private java.time.LocalTime closingTime;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "dealer_open_days",
-            joinColumns = @JoinColumn(name = "dealer_id")
-    )
+    @CollectionTable(name = "dealer_open_days", joinColumns = @JoinColumn(name = "dealer_id"))
     @Column(name = "open_day", nullable = false)
     @Enumerated(EnumType.STRING)
     private Set<DayOfWeek> openDays;
 }
-
