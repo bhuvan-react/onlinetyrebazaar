@@ -87,23 +87,23 @@ export function Footer() {
                   FAQs
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="#" className="text-[#9CA3AF] hover:text-white transition-colors">
                   Shipping Policy
                 </Link>
-              </li>
-              <li>
+              </li> */}
+              {/* <li>
                 <Link href="#" className="text-[#9CA3AF] hover:text-white transition-colors">
                   Return Policy
                 </Link>
-              </li>
+              </li> */}
               <li>
-                <Link href="#" className="text-[#9CA3AF] hover:text-white transition-colors">
-                  Terms & Conditions
+                <Link href="/legal" className="text-[#9CA3AF] hover:text-white transition-colors">
+                  Terms &amp; Conditions
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-[#9CA3AF] hover:text-white transition-colors">
+                <Link href="/legal" className="text-[#9CA3AF] hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
               </li>

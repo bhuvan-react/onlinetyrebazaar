@@ -62,7 +62,7 @@ export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-[#F0FDFA] via-white to-[#CCFBF1] py-12 md:py-20">
+      <section id="buy-tyres" className="relative bg-gradient-to-br from-[#F0FDFA] via-white to-[#CCFBF1] py-12 md:py-20">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 overflow-hidden">
           <div className="absolute top-0 left-0 w-96 h-96 bg-[#0D9488] rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -195,7 +195,7 @@ export default function HomePage() {
               Join thousands of happy customers who trust Online Tyre Bazaar for their tyre needs.
             </p>
             <button
-              onClick={() => document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={() => document.getElementById("buy-tyres")?.scrollIntoView({ behavior: "smooth" })}
               className="px-8 py-4 bg-gradient-to-r from-[#14B8A6] to-[#0D9488] text-white font-semibold rounded-xl hover:opacity-90 transition-opacity inline-flex items-center gap-2"
             >
               🔍 Search Tyres Now

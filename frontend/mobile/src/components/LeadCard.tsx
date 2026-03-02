@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MapPin, Calendar, ArrowRight } from 'lucide-react-native';
+import { MapPin, Calendar, ArrowRight, Clock } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 
 interface LeadCardProps {
@@ -11,51 +11,65 @@ interface LeadCardProps {
     tyreType?: string;
     location: string;
     date: string;
-    status: 'New' | 'Fresh' | 'Follow-up' | 'Converted' | 'Skipped';
+    status: 'New' | 'Fresh' | 'Follow-up' | 'Converted' | 'Skipped' | string;
+    /** When true: card is greyed out and tapping it is blocked at screen level */
+    isOverdue?: boolean;
     onPress: () => void;
 }
 
-export default function LeadCard({ name, vehicle, tyreSize, tyreBrand, tyreType, location, date, status, onPress }: LeadCardProps) {
+export default function LeadCard({ name, vehicle, tyreSize, tyreBrand, tyreType, location, date, status, isOverdue = false, onPress }: LeadCardProps) {
     // Derive tyre type display — defaults to New if no type set
     const isNew = !tyreType || tyreType.toUpperCase() === 'NEW';
     const tyreTypeColor = isNew ? COLORS.teal.main : '#9333EA';
     const tyreTypeLabel = isNew ? 'New' : 'Used';
 
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress}>
+        <TouchableOpacity
+            style={[styles.card, isOverdue && styles.cardOverdue]}
+            onPress={onPress}
+            activeOpacity={isOverdue ? 1 : 0.8}
+        >
+            {/* Overdue badge — shown at the top of the card */}
+            {isOverdue && (
+                <View style={styles.overdueBanner}>
+                    <Clock size={13} color="#fff" />
+                    <Text style={styles.overdueBannerText}>⏰ Overdue – Update Status</Text>
+                </View>
+            )}
+
             <View style={styles.header}>
                 {/* Left: Name, vehicle, tyre size */}
                 <View style={styles.headerLeft}>
-                    <Text style={styles.name}>{name}</Text>
-                    <Text style={styles.vehicle}>{vehicle}</Text>
-                    {tyreBrand && <Text style={[styles.tyreSize, { color: COLORS.teal.dark, fontWeight: '600' }]}>{tyreBrand}</Text>}
-                    {tyreSize && <Text style={styles.tyreSize}>{tyreSize}</Text>}
+                    <Text style={[styles.name, isOverdue && styles.textMuted]}>{name}</Text>
+                    <Text style={[styles.vehicle, isOverdue && styles.textMuted]}>{vehicle}</Text>
+                    {tyreBrand && <Text style={[styles.tyreSize, { color: isOverdue ? COLORS.gray[400] : COLORS.teal.dark, fontWeight: '600' }]}>{tyreBrand}</Text>}
+                    {tyreSize && <Text style={[styles.tyreSize, isOverdue && styles.textMuted]}>{tyreSize}</Text>}
                 </View>
                 {/* Right: New / Used badge replacing VERIFIED */}
-                <View style={[styles.typeBadge, { backgroundColor: tyreTypeColor }]}>
+                <View style={[styles.typeBadge, { backgroundColor: isOverdue ? COLORS.gray[300] : tyreTypeColor }]}>
                     <Text style={styles.badgeText}>{tyreTypeLabel}</Text>
                 </View>
             </View>
 
             <View style={styles.details}>
                 <View style={styles.row}>
-                    <MapPin size={14} color={COLORS.gray[500]} />
-                    <Text style={styles.detailText}>{location}</Text>
+                    <MapPin size={14} color={isOverdue ? COLORS.gray[300] : COLORS.gray[500]} />
+                    <Text style={[styles.detailText, isOverdue && styles.textMuted]}>{location}</Text>
                 </View>
                 <View style={styles.row}>
-                    <Calendar size={14} color={COLORS.gray[500]} />
-                    <Text style={styles.detailText}>{date}</Text>
+                    <Calendar size={14} color={isOverdue ? COLORS.gray[300] : COLORS.gray[500]} />
+                    <Text style={[styles.detailText, isOverdue && styles.textMuted]}>{date}</Text>
                 </View>
             </View>
 
             <View style={styles.footer}>
-                {/* View Details button — Teal for New, Purple for Used */}
                 <TouchableOpacity
-                    style={[styles.viewButton, { backgroundColor: tyreTypeColor }]}
+                    style={[styles.viewButton, { backgroundColor: isOverdue ? COLORS.gray[300] : tyreTypeColor }]}
                     onPress={onPress}
+                    disabled={isOverdue}
                 >
-                    <Text style={styles.viewText}>View Details</Text>
-                    <ArrowRight size={16} color={COLORS.white} />
+                    <Text style={styles.viewText}>{isOverdue ? 'Status Update Required' : 'View Details'}</Text>
+                    {!isOverdue && <ArrowRight size={16} color={COLORS.white} />}
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -77,6 +91,32 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         // Elevation for Android
         elevation: 3,
+    },
+    cardOverdue: {
+        backgroundColor: '#F9FAFB',          // very light grey background
+        borderColor: '#E5E7EB',
+        opacity: 0.75,
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    overdueBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#EF4444',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        marginBottom: 10,
+        alignSelf: 'flex-start',
+    },
+    overdueBannerText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    textMuted: {
+        color: COLORS.gray[400],
     },
     header: {
         flexDirection: 'row',
@@ -136,20 +176,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: COLORS.gray[100],
         paddingTop: 12,
-    },
-    callButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: COLORS.teal.light,
-        borderRadius: 8,
-    },
-    callText: {
-        color: COLORS.teal.dark,
-        fontWeight: '600',
-        fontSize: 13,
     },
     viewButton: {
         flexDirection: 'row',

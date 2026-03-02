@@ -13,6 +13,7 @@ export const API_CONFIG = {
             CREATE: "/customer/leads",
             GET_ALL: "/customer/leads",
             GET_OFFERS: (id: string) => `/customer/leads/${id}/offers`,
+            GET_PURCHASERS: (id: string) => `/customer/leads/${id}/purchasers`,
             SELECT_OFFER: (leadId: string, dealerId: string) => `/customer/leads/${leadId}/select-offer/${dealerId}`,
         },
         VEHICLES: {

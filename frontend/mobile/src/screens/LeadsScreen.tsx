@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList, Modal } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BottomTabParamList } from '../types';
-import { Filter, ChevronDown } from 'lucide-react-native';
+import { Filter, ChevronDown, AlertCircle, X } from 'lucide-react-native';
 import LeadCard from '../components/LeadCard';
 import { getLeads, getUnlockedLeads } from '../services/api';
+import { isLeadOverdue } from '../utils/leadOverdue';
 
 const FILTERS = ['All', 'Fresh', 'Follow-up', 'Converted', 'Skipped'];
 const SORT_OPTIONS = ['Date (Newest)', 'Date (Oldest)', 'Priority'];
@@ -21,6 +22,10 @@ export default function LeadsScreen() {
 
     const [leads, setLeads] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Popup: shown once per session when any follow-up lead is overdue
+    const [showOverduePopup, setShowOverduePopup] = useState(false);
+    const overduePopupShownRef = useRef(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -40,6 +45,7 @@ export default function LeadsScreen() {
 
     const loadLeads = async () => {
         setLoading(true);
+        setLeads([]); // Clear immediately so stale data never shows during refresh
         try {
             let data;
             if (activeFilter === 'Follow-up') {
@@ -59,6 +65,15 @@ export default function LeadsScreen() {
             }
 
             setLeads(leadsData);
+
+            // Check for overdue leads in Follow-up tab — show popup once per session
+            if (activeFilter === 'Follow-up' && !overduePopupShownRef.current) {
+                const hasOverdue = leadsData.some(isLeadOverdue);
+                if (hasOverdue) {
+                    setShowOverduePopup(true);
+                    overduePopupShownRef.current = true;
+                }
+            }
         } catch (error) {
             console.log('Failed to load leads');
             setLeads([]);
@@ -67,16 +82,51 @@ export default function LeadsScreen() {
         }
     };
 
-    const handleCall = () => {
-        Alert.alert('Call', 'Calling customer...');
-    };
-
-    const handleLeadPress = (id: string) => {
+    const handleLeadPress = (id: string, overdue: boolean) => {
+        if (overdue) {
+            Alert.alert(
+                '⏰ Update Required',
+                'Please update the lead status before viewing details.',
+            );
+            return;
+        }
         navigation.navigate('LeadDetails', { leadId: id });
     };
 
     return (
         <View style={styles.container}>
+            {/* 48-hour overdue reminder popup */}
+            <Modal
+                visible={showOverduePopup}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowOverduePopup(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <View style={styles.modalHeader}>
+                            <AlertCircle size={28} color="#EF4444" />
+                            <Text style={styles.modalTitle}>Leads Overdue for Update</Text>
+                        </View>
+                        <Text style={styles.modalBody}>
+                            You have one or more leads that haven't been updated in over{' '}
+                            <Text style={styles.modalHighlight}>48 hours</Text>. These leads are
+                            greyed out until you update their status.
+                        </Text>
+                        <Text style={styles.modalSub}>
+                            Please mark each lead as "Delivery in Progress" or "Not Sold" to
+                            continue.
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => setShowOverduePopup(false)}
+                        >
+                            <Text style={styles.modalButtonText}>Got it</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Filter & Sort Header */}
             <View style={styles.header}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContainer}>
@@ -126,18 +176,22 @@ export default function LeadsScreen() {
                 onRefresh={loadLeads}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.list}
-                renderItem={({ item }) => (
-                    <LeadCard
-                        name={item.customerName}
-                        vehicle={`${item.vehicleModel}${item.vehicleYear ? ' ' + item.vehicleYear : ''}`}
-                        tyreSize={item.tyreSize || (item.tyreInfo ? item.tyreInfo.size : undefined)}
-                        tyreType={item.tyreType}
-                        location={`${item.locationArea || ''} ${item.locationPincode || ''}`.trim() || 'N/A'}
-                        date={new Date(item.createdAt).toLocaleDateString()}
-                        status={item.status === 'NEW' ? 'New' : item.status === 'FOLLOW_UP' ? 'Follow-up' : item.status === 'CONVERTED' ? 'Converted' : item.status}
-                        onPress={() => handleLeadPress(item.id)}
-                    />
-                )}
+                renderItem={({ item }) => {
+                    const overdue = isLeadOverdue(item);
+                    return (
+                        <LeadCard
+                            name={item.customerName}
+                            vehicle={`${item.vehicleModel}${item.vehicleYear ? ' ' + item.vehicleYear : ''}`}
+                            tyreSize={item.tyreSize || (item.tyreInfo ? item.tyreInfo.size : undefined)}
+                            tyreType={item.tyreType}
+                            location={`${item.locationArea || ''} ${item.locationPincode || ''}`.trim() || 'N/A'}
+                            date={new Date(item.createdAt).toLocaleDateString()}
+                            status={item.status === 'NEW' ? 'New' : item.status === 'FOLLOW_UP' ? 'Follow-up' : item.status === 'CONVERTED' ? 'Converted' : item.status}
+                            isOverdue={overdue}
+                            onPress={() => handleLeadPress(item.id, overdue)}
+                        />
+                    );
+                }}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyText}>No leads found</Text>
@@ -239,5 +293,62 @@ const styles = StyleSheet.create({
     emptyText: {
         color: COLORS.gray[500],
         fontSize: 16,
+    },
+    // Overdue popup modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalCard: {
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        padding: 24,
+        width: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 16,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1F2937',
+    },
+    modalBody: {
+        fontSize: 14,
+        color: COLORS.gray[700],
+        lineHeight: 21,
+        marginBottom: 10,
+    },
+    modalHighlight: {
+        fontWeight: '700',
+        color: '#EF4444',
+    },
+    modalSub: {
+        fontSize: 13,
+        color: COLORS.gray[500],
+        lineHeight: 19,
+        marginBottom: 20,
+    },
+    modalButton: {
+        backgroundColor: COLORS.teal.main,
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    modalButtonText: {
+        color: COLORS.white,
+        fontWeight: '700',
+        fontSize: 15,
     },
 });

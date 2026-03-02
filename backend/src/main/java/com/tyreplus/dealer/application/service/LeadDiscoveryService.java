@@ -197,6 +197,13 @@ public class LeadDiscoveryService {
                 && leadPurchaseJpaRepository.existsByLeadIdAndDealerId(lead.getId(), currentDealerId);
         String visibleMobile = (isSelectedDealer || hasPurchased) ? lead.getCustomerMobile() : null;
 
+        // Fetch when this dealer purchased this lead (for 48-hour overdue check)
+        java.time.LocalDateTime purchasedAt = (currentDealerId != null)
+                ? leadPurchaseJpaRepository.findByLeadIdAndDealerId(lead.getId(), currentDealerId)
+                        .map(p -> p.getPurchasedAt())
+                        .orElse(null)
+                : null;
+
         String customerName = "Customer"; // Default
         UUID customerId = lead.getCustomerId();
         if (customerId != null) {
@@ -249,6 +256,7 @@ public class LeadDiscoveryService {
                 lead.getSelectedDealerId(),
                 lead.getCreatedAt(),
                 lead.getVerifiedAt(),
+                purchasedAt,
                 customerName,
                 lead.getServiceRequirement(),
                 lead.getTyreId(),

@@ -28,6 +28,9 @@ public record LeadDetailsResponse(
                 LocalDateTime createdAt,
                 LocalDateTime verifiedAt,
 
+                // When the dealer purchased/unlocked this lead — used for 48-hour overdue check
+                LocalDateTime purchasedAt,
+
                 // New fields for mobile app
                 String customerName,
                 String serviceRequest,

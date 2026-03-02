@@ -19,6 +19,18 @@ export interface Lead {
     verifiedAt: string | null
 }
 
+// Matches backend DealerPurchaserResponse record exactly
+export interface DealerPurchaser {
+    dealerId: string
+    businessName: string
+    ownerName: string
+    phone: string
+    email: string
+    zipCode: string
+    city: string
+    purchasedAt: string
+}
+
 // Matches backend LeadRequest record exactly
 export interface LeadRequest {
     vehicleType: string        // required (@NotBlank)
@@ -67,5 +79,10 @@ export const leadService = {
 
     selectOffer: async (leadId: string, dealerId: string) => {
         return apiClient.post(API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.SELECT_OFFER(leadId, dealerId))
-    }
+    },
+
+    // Returns all dealers who purchased/unlocked this lead (from lead_purchases table)
+    getLeadPurchasers: async (leadId: string) => {
+        return apiClient.get<DealerPurchaser[]>(API_CONFIG.ENDPOINTS.CUSTOMER_LEADS.GET_PURCHASERS(leadId))
+    },
 }

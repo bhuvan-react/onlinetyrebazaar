@@ -1,5 +1,6 @@
 package com.tyreplus.dealer.application.service;
 
+import com.tyreplus.dealer.application.dto.DealerPurchaserResponse;
 import com.tyreplus.dealer.application.dto.LeadDetailsResponse;
 import com.tyreplus.dealer.domain.entity.Lead;
 import com.tyreplus.dealer.domain.entity.Transaction;
@@ -8,13 +9,17 @@ import com.tyreplus.dealer.domain.entity.Wallet;
 import com.tyreplus.dealer.domain.repository.LeadRepository;
 import com.tyreplus.dealer.domain.repository.TransactionRepository;
 import com.tyreplus.dealer.domain.repository.WalletRepository;
+import com.tyreplus.dealer.infrastructure.persistence.entity.DealerJpaEntity;
 import com.tyreplus.dealer.infrastructure.persistence.entity.LeadPurchaseJpaEntity;
+import com.tyreplus.dealer.infrastructure.persistence.repository.DealerJpaRepository;
 import com.tyreplus.dealer.infrastructure.persistence.repository.LeadPurchaseJpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tyreplus.dealer.domain.repository.TyreRepository;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Application service for handling lead purchase operations.
@@ -31,6 +36,7 @@ public class LeadPurchaseService {
     private final com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository;
     private final TyreRepository tyreRepository;
     private final LeadPurchaseJpaRepository leadPurchaseJpaRepository;
+    private final DealerJpaRepository dealerJpaRepository;
 
     public LeadPurchaseService(
             LeadRepository leadRepository,
@@ -38,13 +44,15 @@ public class LeadPurchaseService {
             TransactionRepository transactionRepository,
             com.tyreplus.dealer.domain.repository.CustomerRepository customerRepository,
             TyreRepository tyreRepository,
-            LeadPurchaseJpaRepository leadPurchaseJpaRepository) {
+            LeadPurchaseJpaRepository leadPurchaseJpaRepository,
+            DealerJpaRepository dealerJpaRepository) {
         this.leadRepository = leadRepository;
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.customerRepository = customerRepository;
         this.tyreRepository = tyreRepository;
         this.leadPurchaseJpaRepository = leadPurchaseJpaRepository;
+        this.dealerJpaRepository = dealerJpaRepository;
     }
 
     /**
@@ -134,6 +142,30 @@ public class LeadPurchaseService {
         return mapToResponse(lead, dealerId);
     }
 
+    /**
+     * Returns the details of every dealer who has purchased/unlocked this lead.
+     * Used by the customer-facing "View Dealer Offers" popup on /my-enquiries.
+     */
+    @Transactional(readOnly = true)
+    public List<DealerPurchaserResponse> getDealerPurchasers(UUID leadId) {
+        return leadPurchaseJpaRepository.findByLeadId(leadId).stream()
+                .map(purchase -> {
+                    DealerJpaEntity dealer = dealerJpaRepository.findById(purchase.getDealerId())
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "Dealer not found: " + purchase.getDealerId()));
+                    return new DealerPurchaserResponse(
+                            dealer.getId(),
+                            dealer.getBusinessName(),
+                            dealer.getOwnerName(),
+                            dealer.getPhoneNumber(),
+                            dealer.getEmail(),
+                            dealer.getZipCode(),
+                            dealer.getCity(),
+                            purchase.getPurchasedAt());
+                })
+                .collect(Collectors.toList());
+    }
+
     private void recordDetailedTransaction(Wallet wallet, UUID dealerId, Lead lead, int leadCost,
             Wallet.DeductionBreakdown breakdown) {
         // Create transaction record
@@ -204,6 +236,7 @@ public class LeadPurchaseService {
                 lead.getSelectedDealerId(),
                 lead.getCreatedAt(),
                 lead.getVerifiedAt(),
+                null, // purchasedAt — not available in this context
                 customerName,
                 lead.getServiceRequirement(),
                 lead.getTyreId(),

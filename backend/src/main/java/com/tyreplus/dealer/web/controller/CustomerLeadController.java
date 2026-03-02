@@ -1,5 +1,6 @@
 package com.tyreplus.dealer.web.controller;
 
+import com.tyreplus.dealer.application.dto.DealerPurchaserResponse;
 import com.tyreplus.dealer.application.dto.LeadRequest;
 import com.tyreplus.dealer.application.dto.LeadDetailsResponse;
 import com.tyreplus.dealer.application.dto.OfferResponse;
@@ -72,6 +73,14 @@ public class CustomerLeadController {
             @AuthenticationPrincipal CustomerDetails customer) {
         // TODO: Ensure security (customer can only view their own lead's offers)
         return ResponseEntity.ok(offerService.getOffersForLead(leadId));
+    }
+
+    @Operation(summary = "Get Lead Purchasers", description = "Returns all dealers who purchased/unlocked this lead. Used by the customer to see interested dealers.")
+    @GetMapping("/{leadId}/purchasers")
+    public ResponseEntity<List<DealerPurchaserResponse>> getLeadPurchasers(
+            @PathVariable UUID leadId,
+            @AuthenticationPrincipal CustomerDetails customer) {
+        return ResponseEntity.ok(purchaseService.getDealerPurchasers(leadId));
     }
 
     @Operation(summary = "Select Offer", description = "Customer selects a dealer offer. Deducts from the dealer's wallet.")

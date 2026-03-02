@@ -15,4 +15,6 @@ public interface LeadPurchaseJpaRepository extends JpaRepository<LeadPurchaseJpa
     List<LeadPurchaseJpaEntity> findByDealerId(UUID dealerId);
 
     List<LeadPurchaseJpaEntity> findByLeadId(UUID leadId);
+
+    java.util.Optional<LeadPurchaseJpaEntity> findByLeadIdAndDealerId(UUID leadId, UUID dealerId);
 }
